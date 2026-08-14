@@ -20,9 +20,11 @@
 
     <modules>
         <module>eureka-server</module>
+        <module>admin-server</module>
         <module>user-service</module>
         <module>order-service</module>
         <module>product-service</module>
+        <module>gateway-service</module>
     </modules>
 
 </project>

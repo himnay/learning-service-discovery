@@ -1,9 +1,9 @@
 spring:
   application:
-    name: product-service
+    name: admin-server
 
 server:
-  port: 8083
+  port: 8084
 
 eureka:
   client:
@@ -16,7 +16,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,env,metrics,loggers,threaddump,heapdump,mappings,beans,configprops
+        include: health,info
   endpoint:
     health:
       show-details: always

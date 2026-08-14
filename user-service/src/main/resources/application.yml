@@ -16,7 +16,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,env,metrics,loggers,threaddump,heapdump,mappings,beans,configprops
   endpoint:
     health:
       show-details: always

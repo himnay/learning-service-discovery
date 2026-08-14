@@ -1,6 +1,8 @@
 package com.learning.discovery.order.controller;
 
+import com.learning.discovery.order.client.UserClient;
 import com.learning.discovery.order.model.Order;
+import com.learning.discovery.order.model.OrderWithUser;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,6 +19,12 @@ class OrderController {
             new Order(102L, 2L, "Monitor", 2),
             new Order(103L, 1L, "Mouse", 3));
 
+    private final UserClient userClient;
+
+    OrderController(UserClient userClient) {
+        this.userClient = userClient;
+    }
+
     @GetMapping("/api/orders")
     List<Order> getOrders() {
         return ORDERS;
@@ -28,5 +36,13 @@ class OrderController {
                 .filter(order -> order.id().equals(id))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order " + id + " not found"));
+    }
+
+    // Demonstrates a direct, load-balanced service-to-service call: user-service is
+    // resolved via Eureka + Spring Cloud LoadBalancer, not routed through gateway-service.
+    @GetMapping("/api/orders/{id}/with-user")
+    OrderWithUser getOrderWithUser(@PathVariable Long id) {
+        Order order = getOrder(id);
+        return new OrderWithUser(order, userClient.fetchUser(order.userId()).orElse(null));
     }
 }

@@ -1,0 +1,127 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-08-13T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_gateway_service_discovery",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "learning-service-discovery — Gateway",
+      "description": "REST APIs reachable through gateway-service (localhost:8080), routed via Eureka lb:// to user-service, order-service, product-service.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_base_gateway",
+      "_type": "environment",
+      "parentId": "wrk_gateway_service_discovery",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080"
+      },
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_user_service",
+      "_type": "request_group",
+      "parentId": "wrk_gateway_service_discovery",
+      "name": "User Service (/api/users)"
+    },
+    {
+      "_id": "req_user_list",
+      "_type": "request",
+      "parentId": "fld_user_service",
+      "name": "List users",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_user_get",
+      "_type": "request",
+      "parentId": "fld_user_service",
+      "name": "Get user by id",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users/1",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "fld_order_service",
+      "_type": "request_group",
+      "parentId": "wrk_gateway_service_discovery",
+      "name": "Order Service (/api/orders)"
+    },
+    {
+      "_id": "req_order_list",
+      "_type": "request",
+      "parentId": "fld_order_service",
+      "name": "List orders",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/orders",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_order_get",
+      "_type": "request",
+      "parentId": "fld_order_service",
+      "name": "Get order by id",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/orders/101",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "fld_product_service",
+      "_type": "request_group",
+      "parentId": "wrk_gateway_service_discovery",
+      "name": "Product Service (/api/products)"
+    },
+    {
+      "_id": "req_product_list",
+      "_type": "request",
+      "parentId": "fld_product_service",
+      "name": "List products",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/products",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_product_get",
+      "_type": "request",
+      "parentId": "fld_product_service",
+      "name": "Get product by id",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/products/201",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "fld_gateway_own",
+      "_type": "request_group",
+      "parentId": "wrk_gateway_service_discovery",
+      "name": "Gateway itself"
+    },
+    {
+      "_id": "req_gateway_health",
+      "_type": "request",
+      "parentId": "fld_gateway_own",
+      "name": "Gateway health",
+      "method": "GET",
+      "url": "{{ _.base_url }}/actuator/health",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ]
+    }
+  ]
+}
