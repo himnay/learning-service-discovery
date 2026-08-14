@@ -412,7 +412,7 @@ gateway. Kubernetes solves the same concerns natively, which is why
 Spring-Cloud-style discovery/gateway stacks are far less common in
 Kubernetes-native shops.
 
-![Microservices concerns: Spring Cloud/Netflix OSS vs Kubernetes](docs/img/microservices-concerns-comparison.png)
+![Microservices concerns: Spring Cloud/Netflix OSS vs Kubernetes](docs/images/microservices-concerns-comparison.png)
 
 | Microservices Concern                    | Spring Cloud & Netflix OSS         | Kubernetes                                   |
 |-------------------------------------------|-------------------------------------|-----------------------------------------------|
