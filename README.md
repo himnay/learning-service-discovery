@@ -11,8 +11,9 @@
 7. ❓ [FAQ](#faq)
 8. 🗺️ [Where this fits: Spring Cloud/Netflix OSS vs Kubernetes](#where-this-fits)
 
-Eureka service discovery demo. 5 Maven modules: 1 Eureka registry + 3 REST
-microservices + 1 API gateway, all registering with it.
+Eureka service discovery demo. 6 Maven modules: 1 Eureka registry + 3 REST
+microservices + 1 API gateway + 1 Spring Boot Admin dashboard, all registering
+with the registry.
 
 <a id="modules"></a>
 ## 1. 🧩 Modules
@@ -67,19 +68,34 @@ flowchart TB
     UserSvc["user-service<br/>:8081"]
     OrderSvc["order-service<br/>:8082"]
     ProductSvc["product-service<br/>:8083"]
+    AdminServer["admin-server<br/>:8084<br/>Spring Boot Admin dashboard"]
 
     UserSvc -- "register + heartbeat" --> Eureka
     OrderSvc -- "register + heartbeat" --> Eureka
     ProductSvc -- "register + heartbeat" --> Eureka
     Gateway -- "register + heartbeat" --> Eureka
+    AdminServer -- "register + heartbeat" --> Eureka
     Eureka -. "registry pulled every 30s" .-> LB
+    Eureka -. "registry pulled every 30s" .-> AdminServer
 
     Client -- "GET /api/users/1" --> Route
     Route --> LB
     LB -- "USER-SERVICE → 192.168.x.x:8081" --> UserSvc
     LB -.-> OrderSvc
     LB -.-> ProductSvc
+
+    AdminServer -. "polls /actuator/health" .-> UserSvc
+    AdminServer -. "polls /actuator/health" .-> OrderSvc
+    AdminServer -. "polls /actuator/health" .-> ProductSvc
+    AdminServer -. "polls /actuator/health" .-> Gateway
 ```
+
+`admin-server` isn't part of the request path above — it's a separate observer.
+It discovers the same instances via the same Eureka registry (`DiscoveryClient`,
+no manual registration list), then polls each one's `/actuator/health` on its
+own schedule to drive the dashboard. See the
+[Spring Boot Admin](#spring-boot-admin) section below for what it adds over
+the raw Eureka dashboard.
 
 ```mermaid
 sequenceDiagram
@@ -88,6 +104,7 @@ sequenceDiagram
     participant Gateway as gateway-service :8080
     participant Eureka as eureka-server :8761
     participant User as user-service :8081
+    participant Admin as admin-server :8084
 
     Note over User,Eureka: startup — happens once per service
     User->>Eureka: register(USER-SERVICE, host:8081)
@@ -102,6 +119,14 @@ sequenceDiagram
         Gateway->>Eureka: fetch registry delta
     end
 
+    Note over Admin,Eureka: startup — admin-server discovers instances, doesn't route traffic
+    Admin->>Eureka: register(ADMIN-SERVER, host:8084)
+    Admin->>Eureka: fetch full registry
+    loop every ~10s
+        Admin->>User: GET /actuator/health
+        User-->>Admin: 200 {status: UP, details: {...}}
+    end
+
     Note over Client,User: per request — no hardcoded host:port
     Client->>Gateway: GET /api/users/1
     Gateway->>Gateway: Path predicate matches route "user-service"<br/>uri = lb://USER-SERVICE
@@ -114,6 +139,25 @@ sequenceDiagram
 Because resolution happens per-request against the cached registry, a
 service can restart on a different host/port and the gateway keeps routing
 correctly — no gateway config change needed, just the next registry refresh.
+
+<a id="spring-boot-admin"></a>
+### Spring Boot Admin: discovery vs. the raw Eureka dashboard
+
+`eureka-server`'s own dashboard (`/`) shows what's registered and its lease
+state — up/down, instance count, renewal timestamps. `admin-server` adds a
+per-instance operational view on top of the same registry: live `/env`,
+`/metrics`, `/loggers` (change a package's log level at runtime, no restart),
+`/threaddump`, `/heapdump`, `/mappings`, `/beans`, `/configprops`, and a
+"Journal" tab logging every status transition it has observed. It never
+receives a manually-configured instance list — `EurekaDiscoveryClient` feeds
+it the same registry `gateway-service`'s `LoadBalancer` reads, so any
+service that registers with Eureka shows up in Admin automatically, no
+`admin-server` config change needed.
+
+One asymmetry: `eureka-server` itself never appears in `admin-server`'s
+dashboard. It has `register-with-eureka: false` (see [§FAQ](#faq)) — it's
+the registry, not a client of it — so there's no registration for
+`admin-server` to discover it by.
 
 ### Load balancing across multiple instances of the same service
 
