@@ -24,6 +24,7 @@ microservices + 1 API gateway, all registering with it.
 | `order-service`   | 8082 | Eureka client                 | `GET /api/orders`, `GET /api/orders/{id}`, `GET /api/orders/{id}/with-user` (calls `user-service` directly, load-balanced, no gateway) | http://localhost:8082/swagger-ui.html    |
 | `product-service` | 8083 | Eureka client                 | `GET /api/products`, `GET /api/products/{id}` | http://localhost:8083/swagger-ui.html    |
 | `gateway-service` | 8080 | Eureka client + API gateway    | routes `/api/users/**`, `/api/orders/**`, `/api/products/**` to the 3 services above via `lb://` | —          |
+| `admin-server`    | 8084 | Spring Boot Admin — discovers instances via Eureka, dashboard at http://localhost:8084 | — | — |
 
 <a id="how-the-gateway-finds-services-via-eureka"></a>
 ## 2. 🔎 How the gateway finds services via Eureka
@@ -189,7 +190,7 @@ super-pom (com.org.llm:super-pom:1.0.0)   ← corporate parent, imports learning
 <a id="run-order"></a>
 ## 4. 🚀 Run order
 
-Eureka server must be up first so the 3 clients have somewhere to register.
+Eureka server must be up first so the other clients have somewhere to register.
 
 ```bash
 cd learning-service-discovery
@@ -199,6 +200,7 @@ mvn -pl user-service spring-boot:run &
 mvn -pl order-service spring-boot:run &
 mvn -pl product-service spring-boot:run &
 mvn -pl gateway-service spring-boot:run &
+mvn -pl admin-server spring-boot:run &
 ```
 
 Or build everything first: `mvn clean install`, then run each module's jar.
@@ -207,14 +209,21 @@ Or build everything first: `mvn clean install`, then run each module's jar.
 ## 5. ✅ Verify
 
 - **Eureka dashboard**: http://localhost:8761 — lists `USER-SERVICE`,
-  `ORDER-SERVICE`, `PRODUCT-SERVICE`, `GATEWAY-SERVICE` once all 4 clients
-  register (takes a few seconds after startup; default renewal interval).
+  `ORDER-SERVICE`, `PRODUCT-SERVICE`, `GATEWAY-SERVICE`, `ADMIN-SERVER` once all
+  5 clients register (takes a few seconds after startup; default renewal interval).
+- **Spring Boot Admin dashboard**: http://localhost:8084 — same instances as
+  Eureka above (discovered via `DiscoveryClient`, not manually registered), but
+  with drill-down per instance: health, `/env`, `/metrics`, `/loggers` (change
+  log levels live), `/threaddump`, `/heapdump`, `/mappings`, `/beans`,
+  `/configprops`. `eureka-server` itself isn't listed — it never registers with
+  itself (`register-with-eureka: false`), so Admin has nothing to discover it by.
 - **Health checks** (Spring Boot Actuator, `show-details: always`):
   - http://localhost:8761/actuator/health
   - http://localhost:8081/actuator/health
   - http://localhost:8082/actuator/health
   - http://localhost:8083/actuator/health
   - http://localhost:8080/actuator/health
+  - http://localhost:8084/actuator/health
 - **Through the gateway** (resolves target service via Eureka, no hardcoded port):
   ```bash
   curl http://localhost:8080/api/users
