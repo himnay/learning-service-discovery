@@ -1,6 +1,6 @@
-# learning-service-discovery
+# <span style="color:hsl(13,68%,44%)">learning-service-discovery</span>
 
-## Table of contents
+## <span style="color:hsl(43,68%,32%)">Table of contents</span>
 
 1. 🧩 [Modules](#modules)
 2. 🔎 [How the gateway finds services via Eureka](#how-the-gateway-finds-services-via-eureka)
@@ -16,7 +16,7 @@ microservices + 1 API gateway + 1 Spring Boot Admin dashboard, all registering
 with the registry.
 
 <a id="modules"></a>
-## 1. 🧩 Modules
+## <span style="color:hsl(73,68%,32%)">1. 🧩 Modules</span>
 
 | Module            | Port | Role                          | REST API                          | Swagger UI                              |
 |-------------------|------|--------------------------------|------------------------------------|------------------------------------------|
@@ -28,7 +28,7 @@ with the registry.
 | `admin-server`    | 8084 | Spring Boot Admin — discovers instances via Eureka, dashboard at http://localhost:8084 | — | — |
 
 <a id="how-the-gateway-finds-services-via-eureka"></a>
-## 2. 🔎 How the gateway finds services via Eureka
+## <span style="color:hsl(103,68%,32%)">2. 🔎 How the gateway finds services via Eureka</span>
 
 `gateway-service` never hardcodes a backend host or port. It is itself a
 Eureka client (same `eureka.client.service-url.defaultZone` as the other 3
@@ -141,7 +141,7 @@ service can restart on a different host/port and the gateway keeps routing
 correctly — no gateway config change needed, just the next registry refresh.
 
 <a id="spring-boot-admin"></a>
-### Spring Boot Admin: discovery vs. the raw Eureka dashboard
+### <span style="color:hsl(133,68%,32%)">Spring Boot Admin: discovery vs. the raw Eureka dashboard</span>
 
 `eureka-server`'s own dashboard (`/`) shows what's registered and its lease
 state — up/down, instance count, renewal timestamps. `admin-server` adds a
@@ -159,7 +159,7 @@ dashboard. It has `register-with-eureka: false` (see [§FAQ](#faq)) — it's
 the registry, not a client of it — so there's no registration for
 `admin-server` to discover it by.
 
-### Load balancing across multiple instances of the same service
+### <span style="color:hsl(163,68%,36%)">Load balancing across multiple instances of the same service</span>
 
 Run a second `user-service` instance on a different port (e.g.
 `mvn -pl user-service spring-boot:run -Dspring-boot.run.arguments=--server.port=8091`)
@@ -204,7 +204,7 @@ shows both instances under one `<application>`; then hit
 port in each `user-service` log line alternate.
 
 <a id="parent--bom-chain"></a>
-## 3. 🏗️ Parent / BOM chain
+## <span style="color:hsl(193,68%,36%)">3. 🏗️ Parent / BOM chain</span>
 
 ```
 super-pom (com.org.llm:super-pom:1.0.0)   ← corporate parent, imports learning-bom
@@ -232,7 +232,7 @@ super-pom (com.org.llm:super-pom:1.0.0)   ← corporate parent, imports learning
   dependency management before this repo was created.
 
 <a id="run-order"></a>
-## 4. 🚀 Run order
+## <span style="color:hsl(223,68%,44%)">4. 🚀 Run order</span>
 
 Eureka server must be up first so the other clients have somewhere to register.
 
@@ -250,7 +250,7 @@ mvn -pl admin-server spring-boot:run &
 Or build everything first: `mvn clean install`, then run each module's jar.
 
 <a id="verify"></a>
-## 5. ✅ Verify
+## <span style="color:hsl(253,68%,44%)">5. ✅ Verify</span>
 
 - **Eureka dashboard**: http://localhost:8761 — lists `USER-SERVICE`,
   `ORDER-SERVICE`, `PRODUCT-SERVICE`, `GATEWAY-SERVICE`, `ADMIN-SERVER` once all
@@ -285,7 +285,7 @@ Or build everything first: `mvn clean install`, then run each module's jar.
   ```
 
 <a id="tests"></a>
-## 6. 🧪 Tests
+## <span style="color:hsl(283,68%,44%)">6. 🧪 Tests</span>
 
 Each microservice module has:
 - **Unit tests** (`*ControllerTest`) — `@WebMvcTest` + `MockMvc`, no Spring
@@ -304,7 +304,7 @@ Run all tests: `mvn clean verify` (failsafe plugin from `super-pom` runs the
 `test` phase).
 
 <a id="faq"></a>
-## 7. ❓ FAQ
+## <span style="color:hsl(313,68%,44%)">7. ❓ FAQ</span>
 
 **What happens if a service's port changes after a restart?**
 
@@ -448,7 +448,7 @@ one of those intervals trades staleness for load on `eureka-server` and the
 gateway.
 
 <a id="where-this-fits"></a>
-## 8. 🗺️ Where this fits: Spring Cloud/Netflix OSS vs Kubernetes
+## <span style="color:hsl(343,68%,44%)">8. 🗺️ Where this fits: Spring Cloud/Netflix OSS vs Kubernetes</span>
 
 This repo demonstrates the **Spring Cloud & Netflix OSS** column below —
 `eureka-server` for service discovery and `gateway-service` for the API
