@@ -10,6 +10,7 @@
 6. 🧪 [Tests](#tests)
 7. ❓ [FAQ](#faq)
 8. 🗺️ [Where this fits: Spring Cloud/Netflix OSS vs Kubernetes](#where-this-fits)
+9. 🌐 [Virtual IPs (VIP)](#virtual-ips-vip)
 
 Eureka service discovery demo. 6 Maven modules: 1 Eureka registry + 3 REST
 microservices + 1 API gateway + 1 Spring Boot Admin dashboard, all registering
@@ -473,3 +474,35 @@ Kubernetes-native shops.
 | Packaging, Deployment & Scheduling        | Spring Boot                         | Docker/Rkt, Kubernetes Scheduler & Deployment |
 | Job Management                            | Spring Batch                        | Kubernetes Jobs & Scheduled Jobs              |
 | Singleton Application                     | Spring Cloud Cluster                | Kubernetes Pods                               |
+
+<a id="virtual-ips-vip"></a>
+## <span style="color:hsl(223,80%,58%)">9. 🌐 Virtual IPs (VIP)</span>
+
+In Netflix Eureka, a Virtual IP (VIP) address is a logical identifier or
+virtual hostname assigned to a service instance, defaulting to the
+application name (`spring.application.name`).
+
+**What is a Virtual IP (VIP) in Eureka?**
+
+- **Logical name**: instead of pointing to a physical network IP address, a
+  VIP acts as a logical name (like `USER-SERVICE`) that clients use to
+  target a group of identical service instances.
+- **Default value**: by default, Spring Cloud Netflix Eureka sets the
+  virtual host (`vipAddress`) and secure virtual host (`secureVipAddress`)
+  to the value of `${spring.application.name}`.
+- **Load balancing**: clients use this virtual identifier to resolve where
+  requests should go, allowing Eureka and client-side load balancers (like
+  Ribbon or Spring Cloud LoadBalancer) to route traffic dynamically across
+  healthy instances.
+
+**How to configure VIP in Eureka**
+
+Override the default virtual IP settings in application properties if the
+logical identifier needs to differ from the application name:
+
+```yaml
+eureka:
+  instance:
+    virtual-host-name: custom-service-vip
+    secure-virtual-host-name: secure-custom-service-vip
+```
