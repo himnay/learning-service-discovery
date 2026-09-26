@@ -208,7 +208,7 @@ port in each `user-service` log line alternate.
 ## <span style="color:hsl(118,80%,58%)">3. 🏗️ Parent / BOM chain</span>
 
 ```
-super-pom (com.org.llm:super-pom:1.1.2)   ← corporate parent (Boot 4.1.1), imports learning-bom 3.0.0
+super-pom (com.org.llm:super-pom:1.1.3)   ← corporate parent (Boot 4.1.1), imports learning-bom 3.0.1
   └── learning-service-discovery (com.learning:learning-service-discovery)  ← this repo's root pom, packaging=pom
         ├── eureka-server
         ├── user-service
