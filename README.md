@@ -98,6 +98,12 @@ own schedule to drive the dashboard. See the
 [Spring Boot Admin](#spring-boot-admin) section below for what it adds over
 the raw Eureka dashboard.
 
+> ⚠️ So the dashboard has something to show, every service exposes `env`, `configprops`,
+> `beans`, `threaddump` and `heapdump` over HTTP with no authentication. That is fine on a
+> laptop and dangerous anywhere else: a heap dump contains every secret the process holds.
+> Outside local development, serve actuator on a separate `management.server.port` that only
+> the admin server can reach (or secure it), and drop `heapdump` from the exposure list.
+
 ```mermaid
 sequenceDiagram
     autonumber
