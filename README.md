@@ -49,7 +49,7 @@ spring:
 ```
 
 `lb://` is the load-balanced URI scheme. At request time Spring Cloud
-LoadBalancer's `ReactiveLoadBalancerClientFilter` resolves `USER-SERVICE`
+LoadBalancer's [`ReactiveLoadBalancerClientFilter`][ReactiveLoadBalancerClientFilter] resolves `USER-SERVICE`
 against the gateway's local Eureka registry cache (refreshed every 30s by
 default), picks a live instance, and rewrites the URI to that instance's real
 `host:port` before forwarding. Introspect the resolved routes at
@@ -92,7 +92,7 @@ flowchart TB
 ```
 
 `admin-server` isn't part of the request path above — it's a separate observer.
-It discovers the same instances via the same Eureka registry (`DiscoveryClient`,
+It discovers the same instances via the same Eureka registry ([`DiscoveryClient`][DiscoveryClient],
 no manual registration list), then polls each one's `/actuator/health` on its
 own schedule to drive the dashboard. See the
 [Spring Boot Admin](#spring-boot-admin) section below for what it adds over
@@ -156,7 +156,7 @@ per-instance operational view on top of the same registry: live `/env`,
 `/metrics`, `/loggers` (change a package's log level at runtime, no restart),
 `/threaddump`, `/heapdump`, `/mappings`, `/beans`, `/configprops`, and a
 "Journal" tab logging every status transition it has observed. It never
-receives a manually-configured instance list — `EurekaDiscoveryClient` feeds
+receives a manually-configured instance list — [`EurekaDiscoveryClient`][EurekaDiscoveryClient] feeds
 it the same registry `gateway-service`'s `LoadBalancer` reads, so any
 service that registers with Eureka shows up in Admin automatically, no
 `admin-server` config change needed.
@@ -172,7 +172,7 @@ Run a second `user-service` instance on a different port (e.g.
 `mvn -pl user-service spring-boot:run -Dspring-boot.run.arguments=--server.port=8091`)
 and both register under the same Eureka app ID, `USER-SERVICE`, as two
 separate `instanceId`s. `lb://USER-SERVICE` now resolves to a 2-instance
-pool, and the default `RoundRobinLoadBalancer` alternates between them,
+pool, and the default [`RoundRobinLoadBalancer`][RoundRobinLoadBalancer] alternates between them,
 one call at a time, no stickiness:
 
 ```mermaid
@@ -263,7 +263,7 @@ Or build everything first: `mvn clean install`, then run each module's jar.
   `ORDER-SERVICE`, `PRODUCT-SERVICE`, `GATEWAY-SERVICE`, `ADMIN-SERVER` once all
   5 clients register (takes a few seconds after startup; default renewal interval).
 - **Spring Boot Admin dashboard**: http://localhost:8084 — same instances as
-  Eureka above (discovered via `DiscoveryClient`, not manually registered), but
+  Eureka above (discovered via [`DiscoveryClient`][DiscoveryClient], not manually registered), but
   with drill-down per instance: health, `/env`, `/metrics`, `/loggers` (change
   log levels live), `/threaddump`, `/heapdump`, `/mappings`, `/beans`,
   `/configprops`. `eureka-server` itself isn't listed — it never registers with
@@ -295,10 +295,10 @@ Or build everything first: `mvn clean install`, then run each module's jar.
 ## <span style="color:hsl(171,80%,58%)">6. 🧪 Tests</span>
 
 Each microservice module has:
-- **Unit tests** (`*ControllerTest`) — `@WebMvcTest` + `MockMvc`, no Spring
+- **Unit tests** (`*ControllerTest`) — [`@WebMvcTest`][WebMvcTest] + [`MockMvc`][MockMvc], no Spring
   context beyond the web layer, no network/Eureka involved.
-- **Integration tests** (`*ApplicationIT`) — `@SpringBootTest` with a random
-  port + `TestRestTemplate`, hitting the real embedded servlet container and
+- **Integration tests** (`*ApplicationIT`) — [`@SpringBootTest`][SpringBootTest] with a random
+  port + [`TestRestTemplate`][TestRestTemplate], hitting the real embedded servlet container and
   actuator health endpoint. `eureka.client.enabled=false` in
   `src/test/resources/application-test.yml` so tests don't need a live Eureka
   server.
@@ -335,9 +335,9 @@ same service (load balancing)?**
 Eureka groups instances by app name (`USER-SERVICE`) but keeps each one
 under its own `instanceId`, so N running copies show up as N registry
 entries under the same service ID. `lb://USER-SERVICE` resolves through a
-`ServiceInstanceListSupplier`, which returns every currently-`UP` instance
+[`ServiceInstanceListSupplier`][ServiceInstanceListSupplier], which returns every currently-`UP` instance
 for that ID from the gateway's cached registry. The default
-`RoundRobinLoadBalancer` cycles through that list one call at a time — no
+[`RoundRobinLoadBalancer`][RoundRobinLoadBalancer] cycles through that list one call at a time — no
 sticky sessions, no weighting. Only instances Eureka reports as `UP` are
 handed to the load balancer; the gateway does not itself health-check
 instances before forwarding (`spring.cloud.loadbalancer.health-check.enabled`
@@ -349,7 +349,7 @@ service locations?**
 
 Cached. The gateway fetches the full registry from `eureka-server` once at
 startup, then polls a delta every 30s, keeping the result in an in-memory
-local cache (`DiscoveryClient`). Every request resolves against that local
+local cache ([`DiscoveryClient`][DiscoveryClient]). Every request resolves against that local
 cache — there is no live call to `eureka-server` per request. Eureka is only
 hit on gateway startup, on the periodic 30s poll, and for the gateway's own
 heartbeats. One consequence: if `eureka-server` goes down mid-run, the
@@ -363,11 +363,11 @@ already round-robins between instances?**
 It doesn't implement round-robin itself — "the gateway round-robins" is
 observed behavior, not gateway code. `spring-cloud-starter-gateway-server-webflux`
 pulls in `spring-cloud-starter-loadbalancer` transitively (neither module pom
-declares it explicitly); the gateway's `ReactiveLoadBalancerClientFilter`
+declares it explicitly); the gateway's [`ReactiveLoadBalancerClientFilter`][ReactiveLoadBalancerClientFilter]
 only recognizes the `lb://` scheme and delegates instance selection to a
-`ReactorServiceInstanceLoadBalancer` bean (default: `RoundRobinLoadBalancer`).
+[`ReactorServiceInstanceLoadBalancer`][ReactorServiceInstanceLoadBalancer] bean (default: `RoundRobinLoadBalancer`).
 The split exists because the same load-balancer library is reused by plain
-`@LoadBalanced` HTTP clients outside the gateway too — see the next question.
+[`@LoadBalanced`][LoadBalanced] HTTP clients outside the gateway too — see the next question.
 
 **`order-service` now calls `user-service` directly (`GET
 /api/orders/{id}/with-user`) — does that bypass Eureka, since it skips the
@@ -375,7 +375,7 @@ gateway?**
 
 No — it bypasses **the gateway**, not Eureka. `order-service`'s
 `UserClient` (`order-service/src/main/java/.../client/UserClient.java`) uses
-a `RestClient.Builder` marked `@LoadBalanced`
+a [`RestClient.Builder`][RestClient] marked `@LoadBalanced`
 (`config/LoadBalancerConfig.java`) and calls `http://USER-SERVICE/api/users/{id}`
 — same Eureka-backed service ID resolution and `RoundRobinLoadBalancer` the
 gateway uses, just invoked by `order-service`'s own `DiscoveryClient`
@@ -383,7 +383,7 @@ instead of the gateway's. This is exactly where a load-balanced client
 *needs* to be added per the earlier question: in whichever module **makes**
 the call, not the one that receives it — `user-service` needed no changes.
 If `user-service` is unreachable, `UserClient.fetchUser` catches
-`RestClientException` and the endpoint still returns `200` with `user: null`
+[`RestClientException`][RestClientException] and the endpoint still returns `200` with `user: null`
 rather than a `500`.
 
 **Eureka is CAP-theorem AP (favors Availability + Partition tolerance over
@@ -512,3 +512,19 @@ eureka:
     virtual-host-name: custom-service-vip
     secure-virtual-host-name: secure-custom-service-vip
 ```
+
+<!-- Library classes mentioned above, linked to their source at the versions this project builds with. -->
+
+[DiscoveryClient]: https://github.com/spring-cloud/spring-cloud-commons/blob/v5.0.3/spring-cloud-commons/src/main/java/org/springframework/cloud/client/discovery/DiscoveryClient.java
+[EurekaDiscoveryClient]: https://github.com/spring-cloud/spring-cloud-netflix/blob/v5.0.2/spring-cloud-netflix-eureka-client/src/main/java/org/springframework/cloud/netflix/eureka/EurekaDiscoveryClient.java
+[LoadBalanced]: https://github.com/spring-cloud/spring-cloud-commons/blob/v5.0.3/spring-cloud-commons/src/main/java/org/springframework/cloud/client/loadbalancer/LoadBalanced.java
+[MockMvc]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-test/src/main/java/org/springframework/test/web/servlet/MockMvc.java
+[ReactiveLoadBalancerClientFilter]: https://github.com/spring-cloud/spring-cloud-gateway/blob/v5.0.3/spring-cloud-gateway-server-webflux/src/main/java/org/springframework/cloud/gateway/filter/ReactiveLoadBalancerClientFilter.java
+[ReactorServiceInstanceLoadBalancer]: https://github.com/spring-cloud/spring-cloud-commons/blob/v5.0.3/spring-cloud-loadbalancer/src/main/java/org/springframework/cloud/loadbalancer/core/ReactorServiceInstanceLoadBalancer.java
+[RestClient]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/client/RestClient.java
+[RestClientException]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/client/RestClientException.java
+[RoundRobinLoadBalancer]: https://github.com/spring-cloud/spring-cloud-commons/blob/v5.0.3/spring-cloud-loadbalancer/src/main/java/org/springframework/cloud/loadbalancer/core/RoundRobinLoadBalancer.java
+[ServiceInstanceListSupplier]: https://github.com/spring-cloud/spring-cloud-commons/blob/v5.0.3/spring-cloud-loadbalancer/src/main/java/org/springframework/cloud/loadbalancer/core/ServiceInstanceListSupplier.java
+[SpringBootTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/core/spring-boot-test/src/main/java/org/springframework/boot/test/context/SpringBootTest.java
+[TestRestTemplate]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/module/spring-boot-resttestclient/src/main/java/org/springframework/boot/resttestclient/TestRestTemplate.java
+[WebMvcTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/module/spring-boot-webmvc-test/src/main/java/org/springframework/boot/webmvc/test/autoconfigure/WebMvcTest.java
