@@ -299,8 +299,8 @@ Each microservice module has:
 - **Unit tests** (`*ControllerTest`) — [`@WebMvcTest`][WebMvcTest] + [`MockMvc`][MockMvc], no Spring
   context beyond the web layer, no network/Eureka involved.
 - **Integration tests** (`*ApplicationIT`) — [`@SpringBootTest`][SpringBootTest] with a random
-  port + [`TestRestTemplate`][TestRestTemplate], hitting the real embedded servlet container and
-  actuator health endpoint. `eureka.client.enabled=false` in
+  port + [`RestTestClient`][RestTestClient] (`gateway-service`: [`WebTestClient`][WebTestClient]), hitting
+  the real embedded server and the actuator health endpoint. `eureka.client.enabled=false` in
   `src/test/resources/application-test.yml` so tests don't need a live Eureka
   server.
 
@@ -416,8 +416,8 @@ Eureka assumes it's suffering a network partition (clients are still alive,
 just can't reach the registry) rather than a mass outage, and stops evicting
 — because evicting during a real partition would wrongly kill every
 instance's registration. `eureka-server`'s yml disables this
-(`enable-self-preservation: false`) so local demo restarts evict instantly
-instead of leaving zombie entries around. The tradeoff: on a real network
+(`enable-self-preservation: false`) so instances stopped during a local demo are
+evicted once their lease expires instead of lingering as zombie entries. The tradeoff: on a real network
 with actual partitions, disabling it means a transient blip can mass-evict
 every healthy instance simultaneously, and every client (including the
 gateway) suddenly sees an empty registry for that service. Turning it off
@@ -524,8 +524,9 @@ eureka:
 [ReactorServiceInstanceLoadBalancer]: https://github.com/spring-cloud/spring-cloud-commons/blob/v5.0.3/spring-cloud-loadbalancer/src/main/java/org/springframework/cloud/loadbalancer/core/ReactorServiceInstanceLoadBalancer.java
 [RestClient]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/client/RestClient.java
 [RestClientException]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/client/RestClientException.java
+[RestTestClient]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-test/src/main/java/org/springframework/test/web/servlet/client/RestTestClient.java
 [RoundRobinLoadBalancer]: https://github.com/spring-cloud/spring-cloud-commons/blob/v5.0.3/spring-cloud-loadbalancer/src/main/java/org/springframework/cloud/loadbalancer/core/RoundRobinLoadBalancer.java
 [ServiceInstanceListSupplier]: https://github.com/spring-cloud/spring-cloud-commons/blob/v5.0.3/spring-cloud-loadbalancer/src/main/java/org/springframework/cloud/loadbalancer/core/ServiceInstanceListSupplier.java
 [SpringBootTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/core/spring-boot-test/src/main/java/org/springframework/boot/test/context/SpringBootTest.java
-[TestRestTemplate]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/module/spring-boot-resttestclient/src/main/java/org/springframework/boot/resttestclient/TestRestTemplate.java
 [WebMvcTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/module/spring-boot-webmvc-test/src/main/java/org/springframework/boot/webmvc/test/autoconfigure/WebMvcTest.java
+[WebTestClient]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-test/src/main/java/org/springframework/test/web/reactive/server/WebTestClient.java
