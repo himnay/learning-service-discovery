@@ -20,14 +20,14 @@ with the registry.
 <a id="modules"></a>
 ## <span style="color:hsl(288,80%,58%)">1. 🧩 Modules</span>
 
-| Module            | Port | Role                          | REST API                          | Swagger UI                              |
+| Module (README)   | Port | Role                          | REST API                          | Swagger UI                              |
 |-------------------|------|--------------------------------|------------------------------------|------------------------------------------|
-| `eureka-server`   | 8761 | Service registry / dashboard  | —                                   | —                                        |
-| `user-service`    | 8081 | Eureka client                 | `GET /api/users`, `GET /api/users/{id}`       | http://localhost:8081/swagger-ui.html    |
-| `order-service`   | 8082 | Eureka client                 | `GET /api/orders`, `GET /api/orders/{id}`, `GET /api/orders/{id}/with-user` (calls `user-service` directly, load-balanced, no gateway) | http://localhost:8082/swagger-ui.html    |
-| `product-service` | 8083 | Eureka client                 | `GET /api/products`, `GET /api/products/{id}` | http://localhost:8083/swagger-ui.html    |
-| `gateway-service` | 8080 | Eureka client + API gateway    | routes `/api/users/**`, `/api/orders/**`, `/api/products/**` to the 3 services above via `lb://` | —          |
-| `admin-server`    | 8084 | Spring Boot Admin — discovers instances via Eureka, dashboard at http://localhost:8084 (login `admin`/`admin`) | — | — |
+| [`eureka-server`](eureka-server/README.md) | 8761 | Service registry / dashboard  | —                                   | —                                        |
+| [`user-service`](user-service/README.md) | 8081 | Eureka client                 | `GET /api/users`, `GET /api/users/{id}`       | http://localhost:8081/swagger-ui.html    |
+| [`order-service`](order-service/README.md) | 8082 | Eureka client                 | `GET /api/orders`, `GET /api/orders/{id}`, `GET /api/orders/{id}/with-user` (calls `user-service` directly, load-balanced, no gateway) | http://localhost:8082/swagger-ui.html    |
+| [`product-service`](product-service/README.md) | 8083 | Eureka client                 | `GET /api/products`, `GET /api/products/{id}` | http://localhost:8083/swagger-ui.html    |
+| [`gateway-service`](gateway-service/README.md) | 8080 | Eureka client + API gateway    | routes `/api/users/**`, `/api/orders/**`, `/api/products/**` to the 3 services above via `lb://` | —          |
+| [`admin-server`](admin-server/README.md) | 8084 | Spring Boot Admin — discovers instances via Eureka, dashboard at http://localhost:8084 (login `admin`/`admin`) | — | — |
 
 Every module is secured with HTTP Basic, one shared user `admin`/`admin`
 (override with `ACTUATOR_USER` / `ACTUATOR_PASSWORD`). Only
@@ -220,7 +220,7 @@ port in each `user-service` log line alternate.
 ## <span style="color:hsl(118,80%,58%)">3. 🏗️ Parent / BOM chain</span>
 
 ```
-super-pom (com.org.llm:super-pom:1.2.0)   ← corporate parent (Boot 4.1.1, Java 27), imports learning-bom 3.0.1
+super-pom (com.org.llm:super-pom:1.2.1)   ← corporate parent (Boot 4.1.1, Java 27), imports learning-bom 3.1.0
   └── learning-service-discovery (com.learning:learning-service-discovery)  ← this repo's root pom, packaging=pom
         ├── eureka-server
         ├── admin-server

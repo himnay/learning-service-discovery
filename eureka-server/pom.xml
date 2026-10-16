@@ -34,10 +34,9 @@
             <artifactId>spring-boot-starter-quartz</artifactId>
         </dependency>
         <dependency>
-            <!-- JMX over HTTP at /actuator/jolokia; SBA "JMX" view (2.6.x supports Boot 4) -->
+            <!-- JMX over HTTP at /actuator/jolokia; SBA "JMX" view (version from learning-bom) -->
             <groupId>org.jolokia</groupId>
             <artifactId>jolokia-support-springboot</artifactId>
-            <version>2.6.3</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
