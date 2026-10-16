@@ -224,6 +224,13 @@ curl -u admin:admin -X POST -H 'Content-Type: application/json' \
 curl -u admin:admin -X POST http://localhost:8083/actuator/shutdown   # stops the instance
 ```
 
+### Health probes, info and tags
+
+- ***Probes*** — `management.endpoint.health.probes.enabled: true` adds public `/actuator/health/liveness` and `/actuator/health/readiness` (SBA Details → Health groups).
+- ***Info*** — `info.app.*` (name, description, `tier: backend`, environment) plus the `java`, `os`, `process` contributors (`management.info.*.enabled`) → SBA Details → Info.
+- ***Tags*** — `eureka.instance.metadata-map.tags.environment` (`APP_ENV`, default `local`) and `tags.tier: backend` → badges in SBA's application list.
+- Custom health indicators and metrics live in [order-service](../order-service/README.md) only.
+
 <a id="quartz-logging-config"></a>
 ## <span style="color:hsl(306,80%,58%)">6. ⏰ Quartz job, file logging and application.yml</span>
 

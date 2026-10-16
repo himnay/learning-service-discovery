@@ -19,6 +19,8 @@ eureka:
       # SBA discovers this node from the registry and polls /actuator with these credentials
       user.name: ${spring.security.user.name}
       user.password: ${spring.security.user.password}
+      tags.environment: ${APP_ENV:local}   # SBA shows tags.* as badges in the application list
+      tags.tier: infra
   client:
     # self-register so SBA (which discovers apps from Eureka) lists the registry too;
     # no need to fetch the registry — this node *is* the registry
@@ -29,11 +31,27 @@ eureka:
   server:
     enable-self-preservation: false   # demo/local: expire instances promptly instead of masking outages
 
+info:   # published by /actuator/info (needs management.info.env.enabled) → SBA Details → Info
+  app:
+    name: ${spring.application.name}
+    description: Eureka service registry
+    tier: infra
+    environment: ${APP_ENV:local}
+
 logging:
   file:
     name: logs/${spring.application.name}.log   # enables /actuator/logfile (SBA Logfile view)
 
 management:
+  info:   # extra contributors shown in SBA Details → Info
+    env:
+      enabled: true       # info.* properties above
+    java:
+      enabled: true       # JDK vendor/version, JVM
+    os:
+      enabled: true       # OS name/version/arch
+    process:
+      enabled: true       # PID, CPUs, memory
   endpoints:
     web:
       exposure:
@@ -70,5 +88,7 @@ management:
         enabled: true        # SBA Environment "Update" form (POST /actuator/env, Spring Cloud Context)
     health:
       show-details: always
+      probes:
+        enabled: true     # /actuator/health/liveness + /readiness groups (SBA Details → Health)
     heapdump:
       access: unrestricted

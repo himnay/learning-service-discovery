@@ -563,6 +563,10 @@ eureka:
 | JMX | `jolokia` | servlet modules (not gateway/admin) | `jolokia-support-springboot` 2.6.3 |
 | SBOM | `sbom` | all | root `cyclonedx-maven-plugin` → `META-INF/sbom/application.cdx.json` |
 | Quartz | `quartz` | all | demo `HeartbeatJob`, every minute, in-memory store |
+| Health (custom + probes) | `health` | all (custom indicators: order) | `probes.enabled` → liveness/readiness groups; order adds `ordersCache`, `userService` |
+| Info | `info` | all | `info.app.*` + `management.info.java/os/process/env.enabled` |
+| Tags | — (Eureka metadata) | all | `metadata-map.tags.environment` (`APP_ENV`) / `tags.tier` → badges |
+| Custom metrics | `metrics` | order | `orders.cache.refresh` timer, `orders.db.reads{op}` counter |
 | Shutdown / Restart | `shutdown`, `restart` | all | `access: unrestricted`; restart from Spring Cloud Context |
 | Environment edit + Refresh | `env` POST, `refresh` | all | `management.endpoint.env.post.enabled: true` |
 

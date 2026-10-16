@@ -148,6 +148,13 @@ All exposed under `/actuator/` via `management.endpoints.web.exposure.include`; 
 
 - ***`shutdown`, `restart`, `env` POST and Jolokia mutate the running registry*** — acceptable behind Basic auth on localhost; never expose them on a public port.
 
+### Health probes, info and tags
+
+- ***Probes*** — `management.endpoint.health.probes.enabled: true` adds public `/actuator/health/liveness` and `/actuator/health/readiness` (SBA Details → Health groups).
+- ***Info*** — `info.app.*` (name, description, `tier: infra`, environment) plus the `java`, `os`, `process` contributors (`management.info.*.enabled`) → SBA Details → Info.
+- ***Tags*** — `eureka.instance.metadata-map.tags.environment` (`APP_ENV`, default `local`) and `tags.tier: infra` → badges in SBA's application list.
+- Custom health indicators and metrics live in [order-service](../order-service/README.md) only.
+
 <a id="quartz-logging-config"></a>
 ## <span style="color:hsl(33,80%,58%)">5. ⏱️ Quartz demo job, file logging, configuration</span>
 

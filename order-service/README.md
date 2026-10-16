@@ -282,6 +282,22 @@ All endpoints below are exposed over HTTP via `management.endpoints.web.exposure
 - ***`httpexchanges` and `auditevents` stay disabled without a repository bean*** — that is the only reason [ActuatorConfig.java](src/main/java/com/learning/discovery/order/config/ActuatorConfig.java) exists.
 - ***`shutdown`, `restart`, `env` POST, `refresh` and `jolokia` mutate the running app*** — acceptable here behind Basic auth on localhost; never expose them publicly.
 
+### Health, info, tags and custom metrics
+
+- ***Custom health indicators*** (Details → Health):
+  - `ordersCache` ([OrdersCacheHealthIndicator.java](src/main/java/com/learning/discovery/order/service/OrdersCacheHealthIndicator.java)) — UP with `entries`, `lastRefresh`, `lastRefreshCount`; UNKNOWN before the first refresh or when empty.
+  - `userService` ([UserServiceHealthIndicator.java](src/main/java/com/learning/discovery/order/client/UserServiceHealthIndicator.java)) — user-service instance count + URLs from Eureka; UNKNOWN (never DOWN) when none, because `/with-user` degrades gracefully.
+- ***Probes*** — `management.endpoint.health.probes.enabled: true` adds `/actuator/health/liveness` and `/actuator/health/readiness` (public); readiness here = `readinessState,db`, so the instance isn't ready without Postgres.
+- ***Info*** — `info.app.*` (name, description, tier, environment) plus the `java`, `os`, `process` contributors → Details → Info.
+- ***Tags*** — `eureka.instance.metadata-map.tags.environment` (`APP_ENV`, default `local`) and `tags.tier: backend` → badges in SBA's application list.
+- ***Custom metrics*** (Metrics → pick name):
+
+| Metric | Type | Meaning |
+|---|---|---|
+| `orders.cache.refresh` | Timer | duration/count of each `OrderCacheRefresher` run |
+| `orders.db.reads{op=findAll\|findById}` | Counter | reads that reached Postgres — `findById` only counts cache misses |
+| `cache.gets{result=hit\|miss}`, `cache.size` | Caffeine (`recordStats`) | built-in cache statistics |
+
 <a id="quartz-logging-config"></a>
 ## <span style="color:hsl(300,70%,60%)">7. ⏰ Quartz demo job, file logging, `application.yml`</span>
 

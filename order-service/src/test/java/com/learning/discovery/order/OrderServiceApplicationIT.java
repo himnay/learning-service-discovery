@@ -100,6 +100,42 @@ class OrderServiceApplicationIT {
     }
 
     @Test
+    void healthShowsCustomIndicatorsAndProbes() {
+        restTestClient.get().uri("/actuator/health").accept(MediaType.APPLICATION_JSON).exchange()
+                .expectStatus().is2xxSuccessful()
+                .expectBody()
+                .jsonPath("$.components.ordersCache.status").isEqualTo("UP")
+                .jsonPath("$.components.ordersCache.details.entries").isEqualTo(6)
+                .jsonPath("$.components.userService.status").isEqualTo("UNKNOWN")
+                .jsonPath("$.groups").value(groups -> assertThat(groups.toString()).contains("liveness", "readiness"));
+        anonymousClient().get().uri("/actuator/health/readiness").exchange().expectStatus().is2xxSuccessful();
+        anonymousClient().get().uri("/actuator/health/liveness").exchange().expectStatus().is2xxSuccessful();
+    }
+
+    @Test
+    void infoShowsAppJavaOsAndProcess() {
+        anonymousClient().get().uri("/actuator/info").accept(MediaType.APPLICATION_JSON).exchange()
+                .expectStatus().is2xxSuccessful()
+                .expectBody()
+                .jsonPath("$.app.name").isEqualTo("order-service")
+                .jsonPath("$.app.tier").isEqualTo("backend")
+                .jsonPath("$.java.version").exists()
+                .jsonPath("$.os.name").exists()
+                .jsonPath("$.process.pid").exists();
+    }
+
+    @Test
+    void customMetricsAreRegistered() {
+        restTestClient.get().uri("/api/orders").exchange().expectStatus().is2xxSuccessful();
+        restTestClient.get().uri("/actuator/metrics/orders.cache.refresh").exchange()
+                .expectStatus().is2xxSuccessful()
+                .expectBody().jsonPath("$.measurements[?(@.statistic=='COUNT')].value").value(v ->
+                        assertThat(v.toString()).doesNotContain("[0.0]"));
+        restTestClient.get().uri("/actuator/metrics/orders.db.reads?tag=op:findAll").exchange()
+                .expectStatus().is2xxSuccessful();
+    }
+
+    @Test
     void healthEndpointReportsUpWithoutCredentials() {
         anonymousClient().get().uri("/actuator/health").accept(MediaType.APPLICATION_JSON).exchange()
                 .expectStatus().is2xxSuccessful()
