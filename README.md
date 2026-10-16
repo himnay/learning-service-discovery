@@ -11,6 +11,7 @@
 7. ❓ [FAQ](#faq)
 8. 🗺️ [Where this fits: Spring Cloud/Netflix OSS vs Kubernetes](#where-this-fits)
 9. 🌐 [Virtual IPs (VIP)](#virtual-ips-vip)
+10. 🔐 [Security and Spring Boot Admin features](#security-and-sba-features)
 
 Eureka service discovery demo. 6 Maven modules: 1 Eureka registry + 3 REST
 microservices + 1 API gateway + 1 Spring Boot Admin dashboard, all registering
@@ -26,7 +27,13 @@ with the registry.
 | `order-service`   | 8082 | Eureka client                 | `GET /api/orders`, `GET /api/orders/{id}`, `GET /api/orders/{id}/with-user` (calls `user-service` directly, load-balanced, no gateway) | http://localhost:8082/swagger-ui.html    |
 | `product-service` | 8083 | Eureka client                 | `GET /api/products`, `GET /api/products/{id}` | http://localhost:8083/swagger-ui.html    |
 | `gateway-service` | 8080 | Eureka client + API gateway    | routes `/api/users/**`, `/api/orders/**`, `/api/products/**` to the 3 services above via `lb://` | —          |
-| `admin-server`    | 8084 | Spring Boot Admin — discovers instances via Eureka, dashboard at http://localhost:8084 | — | — |
+| `admin-server`    | 8084 | Spring Boot Admin — discovers instances via Eureka, dashboard at http://localhost:8084 (login `admin`/`admin`) | — | — |
+
+Every module is secured with HTTP Basic, one shared user `admin`/`admin`
+(override with `ACTUATOR_USER` / `ACTUATOR_PASSWORD`). Only
+`/actuator/health` and `/actuator/info` are public — see
+[§10](#security-and-sba-features). `order-service` needs Docker: it starts
+Postgres from the root `docker-compose.yaml` on host port 5433.
 
 <a id="how-the-gateway-finds-services-via-eureka"></a>
 ## <span style="color:hsl(66,80%,50%)">2. 🔎 How the gateway finds services via Eureka</span>
@@ -161,10 +168,9 @@ it the same registry `gateway-service`'s `LoadBalancer` reads, so any
 service that registers with Eureka shows up in Admin automatically, no
 `admin-server` config change needed.
 
-One asymmetry: `eureka-server` itself never appears in `admin-server`'s
-dashboard. It has `register-with-eureka: false` (see [§FAQ](#faq)) — it's
-the registry, not a client of it — so there's no registration for
-`admin-server` to discover it by.
+`eureka-server` registers with itself (`register-with-eureka: true`,
+`fetch-registry: false`) purely so `admin-server` can discover it — the
+registry is still a single node, it just lists itself.
 
 ### <span style="color:hsl(341,80%,58%)">Load balancing across multiple instances of the same service</span>
 
@@ -205,9 +211,9 @@ sequenceDiagram
     U1-->>Client: 200
 ```
 
-Verify it yourself: `curl http://localhost:8761/eureka/apps/USER-SERVICE`
+Verify it yourself: `curl -u admin:admin http://localhost:8761/eureka/apps/USER-SERVICE`
 shows both instances under one `<application>`; then hit
-`curl http://localhost:8080/api/users` a few times in a row and watch the
+`curl -u admin:admin http://localhost:8080/api/users` a few times in a row and watch the
 port in each `user-service` log line alternate.
 
 <a id="parent--bom-chain"></a>
@@ -267,8 +273,8 @@ Or build everything first: `mvn clean install`, then run each module's jar.
   Eureka above (discovered via [`DiscoveryClient`][DiscoveryClient], not manually registered), but
   with drill-down per instance: health, `/env`, `/metrics`, `/loggers` (change
   log levels live), `/threaddump`, `/heapdump`, `/mappings`, `/beans`,
-  `/configprops`. `eureka-server` itself isn't listed — it never registers with
-  itself (`register-with-eureka: false`), so Admin has nothing to discover it by.
+  `/configprops`, plus the views listed in [§10](#security-and-sba-features).
+  `eureka-server` is listed too — it registers with itself.
 - **Health checks** (Spring Boot Actuator, `show-details: always`):
   - http://localhost:8761/actuator/health
   - http://localhost:8081/actuator/health
@@ -278,18 +284,18 @@ Or build everything first: `mvn clean install`, then run each module's jar.
   - http://localhost:8084/actuator/health
 - **Through the gateway** (resolves target service via Eureka, no hardcoded port):
   ```bash
-  curl http://localhost:8080/api/users
-  curl http://localhost:8080/api/orders
-  curl http://localhost:8080/api/products
+  curl -u admin:admin http://localhost:8080/api/users
+  curl -u admin:admin http://localhost:8080/api/orders
+  curl -u admin:admin http://localhost:8080/api/products
   ```
 - **Swagger UI / OpenAPI** for each microservice (springdoc default paths):
   - UI: `http://localhost:<port>/swagger-ui.html`
   - Raw spec: `http://localhost:<port>/v3/api-docs`
 - **Sample REST calls**:
   ```bash
-  curl http://localhost:8081/api/users
-  curl http://localhost:8082/api/orders
-  curl http://localhost:8083/api/products
+  curl -u admin:admin http://localhost:8081/api/users
+  curl -u admin:admin http://localhost:8082/api/orders
+  curl -u admin:admin http://localhost:8083/api/products
   ```
 
 <a id="tests"></a>
@@ -401,7 +407,7 @@ choice (CP, e.g. a strongly-consistent registry) would instead block or
 error the lookup during any disagreement, which is worse for a system where
 "probably still up" beats "definitely correct but unavailable." The nuance:
 this repo runs a **single** `eureka-server` node with no peers
-(`register-with-eureka: false`, `fetch-registry: false`) — it's a SPOF, not
+(`fetch-registry: false`; it registers only with itself so Spring Boot Admin can see it) — it's a SPOF, not
 a cluster, so the AP/CP tradeoff around peer replication doesn't even come
 into play locally. A real deployment runs 2–3 peer-aware `eureka-server`
 nodes precisely so the AP guarantee (keep serving during a partition) has
@@ -530,3 +536,35 @@ eureka:
 [SpringBootTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/core/spring-boot-test/src/main/java/org/springframework/boot/test/context/SpringBootTest.java
 [WebMvcTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/module/spring-boot-webmvc-test/src/main/java/org/springframework/boot/webmvc/test/autoconfigure/WebMvcTest.java
 [WebTestClient]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-test/src/main/java/org/springframework/test/web/reactive/server/WebTestClient.java
+
+<a id="security-and-sba-features"></a>
+## <span style="color:hsl(0,80%,58%)">10. 🔐 Security and Spring Boot Admin features</span>
+
+**Security (as of 2026, Spring Boot 4.1 / SBA 4.1):**
+- ***One shared user per module*** — `spring.security.user` = `admin`/`admin` (`ACTUATOR_USER` / `ACTUATOR_PASSWORD`), HTTP Basic everywhere; `/actuator/health/**` and `/actuator/info` stay public for probes.
+- ***Eureka needs credentials too*** — clients register via `http://admin:admin@localhost:8761/eureka/`; `eureka-server` disables CSRF for `/eureka/**`.
+- ***SBA polls each actuator with metadata credentials*** — every instance publishes `eureka.instance.metadata-map.user.name/user.password`; `admin-server` falls back to `spring.boot.admin.instance-auth.default-*`.
+- ***Gateway forwards `Authorization`*** — call the gateway with Basic auth and the same header reaches the downstream service; `order-service` adds Basic auth to its direct `user-service` call.
+- ***`admin-server` and `gateway-service` are WebFlux*** — reactive `SecurityWebFilterChain`, a wrapped authentication manager publishes login events for Audit Events, and no Jolokia (servlet-only).
+
+**SBA views and the endpoint behind each:**
+
+| SBA view / action | Endpoint | Modules | Backed by |
+|---|---|---|---|
+| Logfile | `logfile` | all | `logging.file.name: logs/<app>.log` |
+| Heap Dump | `heapdump` | all | `management.endpoint.heapdump.access: unrestricted` (Boot 3.5+ defaults to `none`) |
+| Caches | `caches` | order | Caffeine, `expireAfterWrite=10m` |
+| Scheduled Tasks | `scheduledtasks` | order | `OrderCacheRefresher` every 5 min |
+| Flyway | `flyway` | order | `db/migration/V1..V3` |
+| HTTP Exchanges | `httpexchanges` | all | `InMemoryHttpExchangeRepository` |
+| Startup | `startup` | all | `BufferingApplicationStartup` in `main()` (absent in tests) |
+| Audit Events | `auditevents` | all | `InMemoryAuditEventRepository` + Spring Security login events |
+| Sessions | `sessions` | order | Spring Session JDBC (Postgres); log in via `/login` to create one |
+| JMX | `jolokia` | servlet modules (not gateway/admin) | `jolokia-support-springboot` 2.6.3 |
+| SBOM | `sbom` | all | root `cyclonedx-maven-plugin` → `META-INF/sbom/application.cdx.json` |
+| Quartz | `quartz` | all | demo `HeartbeatJob`, every minute, in-memory store |
+| Shutdown / Restart | `shutdown`, `restart` | all | `access: unrestricted`; restart from Spring Cloud Context |
+| Environment edit + Refresh | `env` POST, `refresh` | all | `management.endpoint.env.post.enabled: true` |
+
+- ***Shutdown, restart, env POST and Jolokia mutate the running app*** — fine here behind Basic auth; never expose them on a public port.
+

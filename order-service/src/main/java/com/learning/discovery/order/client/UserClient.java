@@ -1,6 +1,7 @@
 package com.learning.discovery.order.client;
 
 import com.learning.discovery.order.model.UserSummary;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -11,13 +12,19 @@ import java.util.Optional;
 // Calls user-service directly (bypassing gateway-service) to show service-to-service
 // load-balanced calls: "http://USER-SERVICE" is a Eureka service id, resolved to a live
 // instance by Spring Cloud LoadBalancer because the RestClient.Builder is @LoadBalanced.
+// user-service is secured with the same shared credentials, so every call sends Basic auth.
 @Component
 public class UserClient {
 
     private final RestClient restClient;
 
-    public UserClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder) {
-        this.restClient = loadBalancedRestClientBuilder.baseUrl("http://USER-SERVICE").build();
+    public UserClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
+                      @Value("${spring.security.user.name}") String username,
+                      @Value("${spring.security.user.password}") String password) {
+        this.restClient = loadBalancedRestClientBuilder
+                .baseUrl("http://USER-SERVICE")
+                .defaultHeaders(headers -> headers.setBasicAuth(username, password))
+                .build();
     }
 
     public Optional<UserSummary> fetchUser(Long userId) {

@@ -1,6 +1,19 @@
 spring:
   application:
     name: admin-server
+  security:
+    user:                                   # actuator Basic auth AND the SBA UI login form
+      name: ${ACTUATOR_USER:admin}
+      password: ${ACTUATOR_PASSWORD:admin}
+      roles: ACTUATOR
+  boot:
+    admin:
+      ui:
+        remember-me-enabled: false          # reactive Spring Security has no rememberMe(); hide the checkbox
+      instance-auth:                        # Basic auth SBA sends when polling each instance's actuator:
+        enabled: true                       # metadata user.name/user.password wins, these are the fallback
+        default-user-name: ${spring.security.user.name}
+        default-password: ${spring.security.user.password}
 
 server:
   port: 8084
@@ -8,15 +21,53 @@ server:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@localhost:8761/eureka/
   instance:
     prefer-ip-address: true
+    metadata-map:                           # read by SBA's BasicAuthHttpHeaderProvider (SBA discovers itself too)
+      user.name: ${spring.security.user.name}
+      user.password: ${spring.security.user.password}
+
+logging:
+  file:
+    name: logs/${spring.application.name}.log   # enables /actuator/logfile (SBA Logfile view)
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include:
+          - health
+          - info
+          - heapdump
+          - logfile
+          - env
+          - shutdown
+          - restart
+          - refresh
+          - metrics
+          - loggers
+          - threaddump
+          - configprops
+          - beans
+          - mappings
+          - httpexchanges   # InMemoryHttpExchangeRepository (ActuatorConfig)
+          - startup         # BufferingApplicationStartup (AdminServerApplication)
+          - auditevents     # InMemoryAuditEventRepository: SBA UI logins show up here
+          - sbom            # cyclonedx-maven-plugin output
+          - quartz          # HeartbeatJob
+          # no jolokia: SBA 4 server is WebFlux-only, jolokia-support-springboot needs servlet
   endpoint:
+    shutdown:
+      access: unrestricted   # SBA "Shutdown" button
+    restart:
+      access: unrestricted   # SBA "Restart" button (Spring Cloud Context)
+    refresh:
+      access: unrestricted   # SBA "Refresh" on Environment: re-binds @ConfigurationProperties / @RefreshScope
+    env:
+      post:
+        enabled: true        # SBA Environment "Update" form (POST /actuator/env, Spring Cloud Context)
     health:
       show-details: always
+    heapdump:
+      access: unrestricted

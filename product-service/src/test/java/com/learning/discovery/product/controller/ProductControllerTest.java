@@ -1,8 +1,12 @@
 package com.learning.discovery.product.controller;
 
+import com.learning.discovery.product.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -11,7 +15,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductController.class)
+@Import(SecurityConfig.class)
 @ActiveProfiles("test")
+@WithMockUser
 class ProductControllerTest {
 
     @Autowired
@@ -31,6 +37,13 @@ class ProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Monitor"))
                 .andExpect(jsonPath("$.price").value(199.99));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getProductsWithoutCredentialsReturns401() throws Exception {
+        mockMvc.perform(get("/api/products"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

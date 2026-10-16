@@ -1,10 +1,19 @@
 spring:
   application:
     name: gateway-service
+  security:
+    user:
+      name: ${ACTUATOR_USER:admin}
+      password: ${ACTUATOR_PASSWORD:admin}
+      roles: ACTUATOR
+  quartz:
+    job-store-type: memory   # backs /actuator/quartz (SBA Quartz view)
   cloud:
     gateway:
       server:
         webflux:
+          # Authorization header is forwarded to downstream as-is (no RemoveRequestHeader filter) —
+          # user/order/product services require the same Basic creds the client sent to the gateway.
           routes:
             - id: user-service
               uri: lb://USER-SERVICE
@@ -25,17 +34,55 @@ server:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@localhost:8761/eureka/
   instance:
     prefer-ip-address: true
+    metadata-map:
+      user.name: ${spring.security.user.name}           # SBA uses these to poll the secured actuator
+      user.password: ${spring.security.user.password}
+
+logging:
+  file:
+    name: logs/${spring.application.name}.log   # enables /actuator/logfile (SBA Logfile view)
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,env,metrics,loggers,threaddump,heapdump,mappings,beans,configprops
+        include:
+          - health
+          - info
+          - gateway
+          - env
+          - metrics
+          - loggers
+          - threaddump
+          - heapdump
+          - mappings
+          - beans
+          - configprops
+          - logfile
+          - shutdown
+          - restart
+          - refresh
+          - httpexchanges
+          - startup
+          - auditevents
+          - sbom
+          - quartz
   endpoint:
+    shutdown:
+      access: unrestricted   # SBA "Shutdown" button
+    restart:
+      access: unrestricted   # SBA "Restart" button (Spring Cloud Context)
+    refresh:
+      access: unrestricted   # SBA "Refresh" on Environment: re-binds @ConfigurationProperties / @RefreshScope
+    env:
+      post:
+        enabled: true        # SBA Environment "Update" form (POST /actuator/env, Spring Cloud Context)
     health:
       show-details: always
+    heapdump:
+      access: unrestricted
     gateway:
       access: unrestricted

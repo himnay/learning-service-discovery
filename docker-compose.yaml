@@ -1,0 +1,13 @@
+# Postgres for order-service, started automatically by spring-boot-docker-compose (only
+# order-service has that dependency). Kept at the repo root because Boot looks for it in the
+# working directory: IDE run configs use the root, and order-service's spring-boot-maven-plugin
+# is pointed at the root too. Boot reads the mapped port, so no datasource URL is configured.
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+    ports:
+      - "5433:5432"   # 5433 on the host so it doesn't clash with other local Postgres stacks

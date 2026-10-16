@@ -18,7 +18,9 @@
       "parentId": "wrk_gateway_service_discovery",
       "name": "Base Environment",
       "data": {
-        "base_url": "http://localhost:8080"
+        "base_url": "http://localhost:8080",
+        "username": "admin",
+        "password": "admin"
       },
       "isPrivate": false
     },
@@ -36,8 +38,16 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/users",
       "headers": [
-        { "name": "Accept", "value": "application/json" }
-      ]
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      }
     },
     {
       "_id": "req_user_get",
@@ -47,8 +57,16 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/users/1",
       "headers": [
-        { "name": "Accept", "value": "application/json" }
-      ]
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      }
     },
     {
       "_id": "fld_order_service",
@@ -64,8 +82,16 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/orders",
       "headers": [
-        { "name": "Accept", "value": "application/json" }
-      ]
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      }
     },
     {
       "_id": "req_order_get",
@@ -75,8 +101,16 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/orders/101",
       "headers": [
-        { "name": "Accept", "value": "application/json" }
-      ]
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      }
     },
     {
       "_id": "fld_product_service",
@@ -92,8 +126,16 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/products",
       "headers": [
-        { "name": "Accept", "value": "application/json" }
-      ]
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      }
     },
     {
       "_id": "req_product_get",
@@ -103,8 +145,16 @@
       "method": "GET",
       "url": "{{ _.base_url }}/api/products/201",
       "headers": [
-        { "name": "Accept", "value": "application/json" }
-      ]
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      }
     },
     {
       "_id": "fld_gateway_own",
@@ -120,8 +170,16 @@
       "method": "GET",
       "url": "{{ _.base_url }}/actuator/health",
       "headers": [
-        { "name": "Accept", "value": "application/json" }
-      ]
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      }
     }
   ]
 }

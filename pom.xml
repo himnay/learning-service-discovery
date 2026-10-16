@@ -27,4 +27,15 @@
         <module>gateway-service</module>
     </modules>
 
+    <build>
+        <plugins>
+            <!-- Executions/config come from spring-boot-starter-parent's pluginManagement: writes
+                 META-INF/sbom/application.cdx.json, served by /actuator/sbom (SBA "SBOM" view). -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

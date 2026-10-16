@@ -1,6 +1,13 @@
 spring:
   application:
     name: eureka-server
+  security:
+    user:
+      name: ${ACTUATOR_USER:admin}
+      password: ${ACTUATOR_PASSWORD:admin}
+      roles: ACTUATOR
+  quartz:
+    job-store-type: memory
 
 server:
   port: 8761
@@ -8,20 +15,60 @@ server:
 eureka:
   instance:
     hostname: localhost
+    metadata-map:
+      # SBA discovers this node from the registry and polls /actuator with these credentials
+      user.name: ${spring.security.user.name}
+      user.password: ${spring.security.user.password}
   client:
-    # this node is the registry itself — it must not register with or fetch from itself
-    register-with-eureka: false
+    # self-register so SBA (which discovers apps from Eureka) lists the registry too;
+    # no need to fetch the registry — this node *is* the registry
+    register-with-eureka: true
     fetch-registry: false
     service-url:
-      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+      defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@${eureka.instance.hostname}:${server.port}/eureka/
   server:
     enable-self-preservation: false   # demo/local: expire instances promptly instead of masking outages
+
+logging:
+  file:
+    name: logs/${spring.application.name}.log   # enables /actuator/logfile (SBA Logfile view)
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include:
+          - health
+          - info
+          - heapdump
+          - logfile
+          - env
+          - shutdown
+          - restart
+          - refresh
+          - metrics
+          - loggers
+          - threaddump
+          - configprops
+          - beans
+          - mappings
+          - httpexchanges
+          - startup
+          - auditevents
+          - sbom
+          - quartz
+          - jolokia
   endpoint:
+    shutdown:
+      access: unrestricted   # SBA "Shutdown" button
+    restart:
+      access: unrestricted   # SBA "Restart" button (Spring Cloud Context)
+    refresh:
+      access: unrestricted   # SBA "Refresh" on Environment: re-binds @ConfigurationProperties / @RefreshScope
+    env:
+      post:
+        enabled: true        # SBA Environment "Update" form (POST /actuator/env, Spring Cloud Context)
     health:
       show-details: always
+    heapdump:
+      access: unrestricted

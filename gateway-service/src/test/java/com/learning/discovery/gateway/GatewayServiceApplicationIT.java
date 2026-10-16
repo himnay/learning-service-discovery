@@ -19,9 +19,38 @@ class GatewayServiceApplicationIT {
     private WebTestClient webTestClient;
 
     @Test
-    void healthEndpointReportsUp() {
+    void healthEndpointReportsUpWithoutCredentials() {
         webTestClient.get().uri("/actuator/health").accept(MediaType.APPLICATION_JSON).exchange()
-                .expectStatus().is2xxSuccessful()
+                .expectStatus().isOk()
                 .expectBody().jsonPath("$.status").isEqualTo("UP");
+    }
+
+    @Test
+    void protectedPathWithoutCredentialsIsUnauthorized() {
+        webTestClient.get().uri("/actuator/env").exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void protectedPathWithCredentialsIsAllowedAndAudited() {
+        webTestClient.get().uri("/actuator/env")
+                .headers(h -> h.setBasicAuth("admin", "admin"))
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/actuator/auditevents?type=AUTHENTICATION_SUCCESS")
+                .headers(h -> h.setBasicAuth("admin", "admin"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody().jsonPath("$.events[0].principal").isEqualTo("admin");
+    }
+
+    @Test
+    void quartzHeartbeatJobIsRegistered() {
+        webTestClient.get().uri("/actuator/quartz/jobs/demo/heartbeatJob")
+                .headers(h -> h.setBasicAuth("admin", "admin"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody().jsonPath("$.name").isEqualTo("heartbeatJob");
     }
 }

@@ -1,6 +1,28 @@
 spring:
   application:
     name: order-service
+  # Datasource comes from ../docker-compose.yaml (spring-boot-docker-compose starts Postgres and wires
+  # the URL/credentials); Flyway runs db/migration/V*.sql on startup.
+  cache:
+    type: caffeine
+    cache-names: orders
+    caffeine:
+      # Every key expires 10 min after it is written; recordStats feeds cache.* metrics.
+      spec: maximumSize=1000,expireAfterWrite=10m,recordStats
+  security:
+    user:   # single in-memory user shared by all services (API, actuator, Eureka, SBA)
+      name: ${ACTUATOR_USER:admin}
+      password: ${ACTUATOR_PASSWORD:admin}
+      roles: ACTUATOR
+  session:
+    jdbc:
+      initialize-schema: never   # tables come from Flyway V3__spring_session.sql
+  quartz:
+    job-store-type: memory
+
+orders:
+  cache:
+    refresh-interval: 5m   # OrderCacheRefresher reloads the cache from Postgres at this rate
 
 server:
   port: 8082
@@ -8,15 +30,57 @@ server:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@localhost:8761/eureka/
   instance:
     prefer-ip-address: true
+    metadata-map:   # SBA reads these to authenticate its actuator polling
+      user.name: ${spring.security.user.name}
+      user.password: ${spring.security.user.password}
+
+logging:
+  file:
+    name: logs/${spring.application.name}.log   # enables /actuator/logfile (SBA Logfile view)
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,env,metrics,loggers,threaddump,heapdump,mappings,beans,configprops
+        include:
+          - health
+          - info
+          - env
+          - metrics
+          - loggers
+          - threaddump
+          - heapdump
+          - mappings
+          - beans
+          - configprops
+          - caches
+          - scheduledtasks
+          - flyway
+          - logfile
+          - shutdown
+          - restart
+          - refresh
+          - httpexchanges
+          - startup
+          - auditevents
+          - sbom
+          - quartz
+          - jolokia
+          - sessions
   endpoint:
+    shutdown:
+      access: unrestricted   # SBA "Shutdown" button
+    restart:
+      access: unrestricted   # SBA "Restart" button (Spring Cloud Context)
+    refresh:
+      access: unrestricted   # SBA "Refresh" on Environment: re-binds @ConfigurationProperties / @RefreshScope
+    env:
+      post:
+        enabled: true        # SBA Environment "Update" form (POST /actuator/env, Spring Cloud Context)
     health:
       show-details: always
+    heapdump:
+      access: unrestricted
