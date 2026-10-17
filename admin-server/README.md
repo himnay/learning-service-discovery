@@ -538,3 +538,42 @@ client ◀── GET /actuator/health, /info, /metrics … ───────
 - ***`eureka.client.healthcheck.enabled: true` doesn't change this*** — it feeds actuator health into the Eureka UP/DOWN status, but SBA still polls for details.
 - ***Reducing the load*** — `spring.boot.admin.monitor.status-interval: 30s` (default 10 s; alerts arrive later), `info-interval: 5m`. It only matters with hundreds of instances: the default is one light GET per instance every 10 s.
 - ***Heartbeats aren't extra cost for SBA*** — services send them anyway so the gateway and order → user calls can find each other; SBA just reads the same registry.
+
+**Q5. Can we avoid `spring-boot-admin-starter-client` in every service and rely on Eureka alone?**
+
+- ***Yes — this repo already does.*** None of the 6 services has the SBA client; each needs only Eureka + actuator, and admin-server needs only `spring-cloud-starter-netflix-eureka-client` (instances are discovered automatically, no per-service SBA config).
+
+What each service needs (already in place):
+
+| Need | Config | Why |
+|---|---|---|
+| Eureka client | `spring-cloud-starter-netflix-eureka-client` | to appear in the registry SBA reads |
+| Actuator exposed | `management.endpoints.web.exposure.include` | SBA polls these endpoints |
+| Reachable address | `eureka.instance.prefer-ip-address: true` | SBA calls the URL registered in Eureka |
+| Credentials for SBA | `metadata-map.user.name` / `user.password` | actuator is secured |
+| Optional: tags | `metadata-map.tags.*` | badges in SBA |
+
+Eureka metadata SBA understands, if you move off the defaults:
+
+| Metadata key | Needed when |
+|---|---|
+| `management.port` | actuator runs on a separate `management.server.port` |
+| `management.context-path` | actuator isn't under `/actuator` |
+| `health.path` | health isn't at `<context-path>/health` |
+| `user.name` / `user.password` | actuator is secured |
+
+SBA client vs Eureka only:
+
+| | SBA client | Eureka only |
+|---|---|---|
+| Extra dependency in every service | yes | **no** |
+| Services need SBA's URL and credentials | yes | **no** |
+| New instance appears in SBA | ≤ 10 s | ≤ ~30–40 s (SBA's registry refresh + Eureka cache) |
+| Shutdown removal | immediate DELETE (if auto-deregistration is on) | immediate on clean shutdown (Eureka cancel), else after lease expiry (30 s here) |
+| Works without a registry | yes | no |
+| Non-Spring apps | possible (`POST /instances`) | only if they register with Eureka and expose actuator-style endpoints |
+
+- ***Only what's in Eureka shows up*** — a batch job or non-Spring app that doesn't register is invisible to SBA.
+- ***Up to ~30 s lag for new instances*** — shorten with `eureka.client.registry-fetch-interval-seconds: 10` on admin-server.
+- ***The registered address must be reachable from SBA*** — that's where `prefer-ip-address`, Docker networks and NAT matter.
+- ***Verdict*** — Eureka only is the cleaner choice when Eureka already runs; keep the SBA client for apps outside the registry.
