@@ -1,3 +1,6 @@
+server:
+  port: 8761
+
 spring:
   application:
     name: eureka-server
@@ -8,9 +11,6 @@ spring:
       roles: ACTUATOR
   quartz:
     job-store-type: memory
-
-server:
-  port: 8761
 
 eureka:
   instance:

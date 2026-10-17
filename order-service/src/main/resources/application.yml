@@ -1,3 +1,6 @@
+server:
+  port: 8082
+
 spring:
   application:
     name: order-service
@@ -23,9 +26,6 @@ spring:
 orders:
   cache:
     refresh-interval: 5m   # OrderCacheRefresher reloads the cache from Postgres at this rate
-
-server:
-  port: 8082
 
 eureka:
   client:

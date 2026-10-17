@@ -1,3 +1,6 @@
+server:
+  port: 8084
+
 spring:
   application:
     name: admin-server
@@ -14,9 +17,6 @@ spring:
         enabled: true                       # metadata user.name/user.password wins, these are the fallback
         default-user-name: ${spring.security.user.name}
         default-password: ${spring.security.user.password}
-
-server:
-  port: 8084
 
 eureka:
   client:
