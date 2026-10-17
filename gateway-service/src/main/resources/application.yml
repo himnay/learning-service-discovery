@@ -31,6 +31,42 @@ spring:
               uri: lb://PRODUCT-SERVICE
               predicates:
                 - Path=/api/products/**
+            # OpenAPI specs of the services, for the aggregated Swagger UI (springdoc.swagger-ui.urls below).
+            # Not under /v3/api-docs/**: springdoc's own handler (higher precedence than gateway routes)
+            # would treat the last segment as a group name.
+            - id: user-service-api-docs
+              uri: lb://USER-SERVICE
+              predicates:
+                - Path=/api-docs/user-service
+              filters:
+                - SetPath=/v3/api-docs
+            - id: order-service-api-docs
+              uri: lb://ORDER-SERVICE
+              predicates:
+                - Path=/api-docs/order-service
+              filters:
+                - SetPath=/v3/api-docs
+            - id: product-service-api-docs
+              uri: lb://PRODUCT-SERVICE
+              predicates:
+                - Path=/api-docs/product-service
+              filters:
+                - SetPath=/v3/api-docs
+
+# Swagger UI at http://localhost:8080/swagger-ui.html with a dropdown of the three service specs. Each
+# spec's server URL is relative ("/"), so "Try it out" calls the gateway, which routes /api/** as usual.
+springdoc:
+  api-docs:
+    enabled: true            # the UI needs springdoc's config endpoint; the gateway's own spec is empty
+  swagger-ui:
+    urls:
+      - name: user-service
+        url: /api-docs/user-service
+      - name: order-service
+        url: /api-docs/order-service
+      - name: product-service
+        url: /api-docs/product-service
+    urls-primary-name: user-service
 
 eureka:
   client:
@@ -58,6 +94,19 @@ logging:
     name: logs/${spring.application.name}.log   # enables /actuator/logfile (SBA Logfile view)
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0    # trace every request (demo); Boot's default is 0.1
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          # OTLP/HTTP receiver of the OTel Collector in zipkin-server/, which forwards to Zipkin (http://localhost:9411)
+          endpoint: ${OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  otlp:
+    metrics:
+      export:
+        enabled: false    # the starter also brings micrometer-registry-otlp; only traces are exported
   info:   # extra contributors shown in SBA Details → Info
     env:
       enabled: true       # info.* properties above

@@ -5,6 +5,13 @@ server:
 spring:
   application:
     name: product-service
+  # Datasource comes from product-service/docker-compose.yaml (spring-boot-docker-compose starts Postgres and wires
+  # the URL/credentials); Flyway runs db/migration/V*.sql on startup. The path is relative to the working
+  # directory, which is the repo root: IntelliJ run configs use it, and so does spring-boot-maven-plugin
+  # (<workingDirectory> in pom.xml).
+  docker:
+    compose:
+      file: product-service/docker-compose.yaml
   security:
     user:
       name: ${ACTUATOR_USER:admin}
@@ -30,7 +37,7 @@ eureka:
 info:   # published by /actuator/info (needs management.info.env.enabled) → SBA Details → Info
   app:
     name: ${spring.application.name}
-    description: Products REST API
+    description: Products REST API backed by Postgres
     tier: backend
     environment: ${APP_ENV:local}
 
@@ -39,6 +46,19 @@ logging:
     name: logs/${spring.application.name}.log   # enables /actuator/logfile (SBA Logfile view)
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0    # trace every request (demo); Boot's default is 0.1
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          # OTLP/HTTP receiver of the OTel Collector in zipkin-server/, which forwards to Zipkin (http://localhost:9411)
+          endpoint: ${OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  otlp:
+    metrics:
+      export:
+        enabled: false    # the starter also brings micrometer-registry-otlp; only traces are exported
   info:   # extra contributors shown in SBA Details → Info
     env:
       enabled: true       # info.* properties above
@@ -86,5 +106,8 @@ management:
       show-details: always
       probes:
         enabled: true     # /actuator/health/liveness + /readiness groups (SBA Details → Health)
+      group:
+        readiness:
+          include: readinessState,db   # not ready without Postgres
     heapdump:
       access: unrestricted

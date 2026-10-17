@@ -1,0 +1,22 @@
+# Distributed tracing backend. The services export spans over OTLP (spring-boot-starter-opentelemetry)
+# to the OpenTelemetry Collector, which batches them and forwards them to Zipkin in Zipkin's own format.
+# Not started by any service: run `docker compose up -d` in this directory before (or after) the services.
+# UI: http://localhost:9411
+name: tracing
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.130.0
+    command: [ "--config=/etc/otelcol/config.yaml" ]
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP, used by the services (management.opentelemetry.tracing.export.otlp.endpoint)
+    depends_on:
+      - zipkin
+
+  zipkin:
+    image: openzipkin/zipkin:3.5.1
+    ports:
+      - "9411:9411"   # Zipkin UI + API; in-memory storage, traces are gone after a restart

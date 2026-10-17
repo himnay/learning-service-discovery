@@ -26,7 +26,7 @@ file only covers what is specific to this module.
 
 - ***Spring MVC (servlet) app on port 8082*** — `server.port: 8082`, registers with Eureka as `ORDER-SERVICE` (`spring.application.name: order-service`, `prefer-ip-address: true`).
 - ***Stack (as of 2026)*** — Spring Boot 4.1 (`spring-boot-starter-webmvc`), Spring Cloud 2025.1 (Eureka client + LoadBalancer), Java 25+ style entry point (package-private class with a non-public `static void main`), all versions inherited from the parent chain described in [../README.md §3](../README.md#parent--bom-chain).
-- ***Only module that needs Docker*** — Postgres is started by `spring-boot-docker-compose` from the repo-root [../docker-compose.yaml](../docker-compose.yaml).
+- ***Needs Docker*** — Postgres is started by `spring-boot-docker-compose` from this module's [docker-compose.yaml](docker-compose.yaml) (`user-service` and `product-service` do the same with their own file).
 
 **Dependencies ([pom.xml](pom.xml)):**
 
@@ -39,6 +39,7 @@ file only covers what is specific to this module.
 | Caching | `spring-boot-starter-cache`, `caffeine` |
 | Security / sessions | `spring-boot-starter-security`, `spring-boot-starter-session-jdbc` |
 | Ops | `spring-boot-starter-actuator`, `spring-boot-starter-quartz`, `jolokia-support-springboot` **2.6.3** (version from `learning-bom` 3.1.0, no `<version>` in the pom) |
+| Tracing | `spring-boot-starter-opentelemetry` → OTLP to [../zipkin-server](../zipkin-server/README.md) |
 | Boilerplate | `lombok` (optional; `@Slf4j`) |
 | Test | `spring-boot-starter-webmvc-test`, `spring-boot-starter-security-test`, `spring-boot-testcontainers`, `testcontainers-junit-jupiter`, `testcontainers-postgresql` |
 
@@ -79,7 +80,7 @@ curl -u admin:admin http://localhost:8082/api/orders/101/with-user
 <a id="run"></a>
 ## <span style="color:hsl(96,80%,45%)">2. 🚀 Run it</span>
 
-- ***Docker must be running*** — on startup `spring-boot-docker-compose` runs `docker compose up` on [../docker-compose.yaml](../docker-compose.yaml), waits for Postgres, and ***builds the datasource URL/credentials itself*** from the running container (no `spring.datasource.*` in [application.yml](src/main/resources/application.yml)).
+- ***Docker must be running*** — on startup `spring-boot-docker-compose` runs `docker compose up` on [docker-compose.yaml](docker-compose.yaml), waits for Postgres, and ***builds the datasource URL/credentials itself*** from the running container (no `spring.datasource.*` in [application.yml](src/main/resources/application.yml)).
 - ***Postgres 18 on host port 5433*** — DB/user/password all `orders`; `5433:5432` so it does not clash with another local Postgres on 5432.
 - ***Start Eureka first*** (see [../README.md §4](../README.md#run-order)) — order-service runs without it, but logs registration errors and `/with-user` cannot resolve `USER-SERVICE`.
 
@@ -90,12 +91,12 @@ mvn -pl user-service  spring-boot:run &     # only needed for /with-user
 mvn -pl order-service spring-boot:run
 ```
 
-**Why the compose file is at the repo root:**
+**Where the compose file lives and how Boot finds it:**
 
-- ***Boot looks for `compose.yaml` / `docker-compose.yaml` in the working directory***, and only `order-service` has the `spring-boot-docker-compose` dependency.
-- IDE run configurations default to the repo root, so the file sits there.
-- For `mvn -pl order-service spring-boot:run` the [pom.xml](pom.xml) pins `spring-boot-maven-plugin`'s `<workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>`, i.e. the repo root, so Maven runs find it too.
-- Side effect: the log file `logs/order-service.log` is written relative to that working directory (repo root when run from Maven/IDE; `order-service/logs/` when tests run inside the module).
+- ***It sits in this module*** ([docker-compose.yaml](docker-compose.yaml)), but the working directory is the repo root: IntelliJ run configurations use the project root, and the [pom.xml](pom.xml) pins `spring-boot-maven-plugin`'s `<workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>` so `mvn -pl order-service spring-boot:run` matches.
+- So [application.yml](src/main/resources/application.yml) sets `spring.docker.compose.file: order-service/docker-compose.yaml` (relative to the root). `user-service` and `product-service` do the same with their own files.
+- `name: order-db` gives it its own Compose project, so it never touches the other modules' Postgres containers.
+- Side effect: the log file `logs/order-service.log` is written relative to the working directory (repo root when run from Maven/IDE; `order-service/logs/` when tests run inside the module).
 
 **Credentials:**
 
@@ -120,7 +121,7 @@ curl -u admin:admin http://localhost:8082/actuator/flyway
 - To remove it completely, from the repo root:
 
 ```bash
-docker compose down        # removes the postgres container; Flyway re-creates + re-seeds on next start
+docker compose -f order-service/docker-compose.yaml down   # removes the postgres container; Flyway re-creates + re-seeds on next start
 ```
 
 - ***Stale-container / port 5433 gotcha*** — if some other container already publishes host port 5433 (e.g. an older Postgres started from a different directory, which Compose treats as a different project), `docker compose up` fails with `Bind for 0.0.0.0:5433 failed: port is already allocated`. Find and remove it:
@@ -224,7 +225,7 @@ flowchart LR
 http
     .authorizeHttpRequests(auth -> auth
             .requestMatchers("/actuator/health/**", "/actuator/info",
-                    "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
+                    "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
             .anyRequest().authenticated())
     .httpBasic(Customizer.withDefaults())
     .formLogin(Customizer.withDefaults())
@@ -316,7 +317,7 @@ All endpoints below are exposed over HTTP via `management.endpoints.web.exposure
 spring:
   application:
     name: order-service              # Eureka service id ORDER-SERVICE, log file name
-  # no spring.datasource.* — docker-compose support wires it from ../docker-compose.yaml
+  # no spring.datasource.* — docker-compose support wires it from docker-compose.yaml
   cache:
     type: caffeine
     cache-names: orders
@@ -402,9 +403,9 @@ Both test classes run with `@ActiveProfiles("test")`; [application-test.yml](src
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `No Docker Compose file found in directory '…/order-service'` | Started with the module as working directory (IDE config, `java -jar` from `order-service/`) | Run from the repo root, or set `spring.docker.compose.file=../docker-compose.yaml` |
+| `No Docker Compose file found` / `… docker-compose.yaml does not exist` | Started with a working directory other than the repo root (e.g. the module, `$MODULE_WORKING_DIR$`) | Set the run config's working directory to the project root, or override `spring.docker.compose.file=docker-compose.yaml` |
 | `Bind for 0.0.0.0:5433 failed: port is already allocated` | Another/stale container (often from a different Compose project) holds 5433 | `docker ps --filter publish=5433`, then `docker rm -f <id>`; or `docker compose down` in the directory that started it |
-| `No host port mapping found` / datasource not configured | The compose service publishes no host port, so Boot can't build a JDBC URL | Keep `ports: - "5433:5432"` in [../docker-compose.yaml](../docker-compose.yaml) |
+| `No host port mapping found` / datasource not configured | The compose service publishes no host port, so Boot can't build a JDBC URL | Keep `ports: - "5433:5432"` in [docker-compose.yaml](docker-compose.yaml) |
 | Startup fails connecting to Docker | Docker daemon not running | Start Docker; the app has no fallback datasource |
 | `401` on `/api/**` or actuator | Missing/wrong Basic credentials, or `ACTUATOR_USER/PASSWORD` set differently in this process vs. the caller | `curl -u admin:admin …`; keep the env vars identical across all modules |
 | `/with-user` returns `"user": null` | `user-service` down, not yet registered/fetched by Eureka (registry cache lag ~30 s), or rejected the credentials | Start `user-service`, wait for it in the Eureka dashboard, check its logs |

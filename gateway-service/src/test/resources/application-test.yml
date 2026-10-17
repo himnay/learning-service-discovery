@@ -1,3 +1,7 @@
 eureka:
   client:
     enabled: false   # unit/integration tests run without a live Eureka server
+management:
+  tracing:
+    export:
+      enabled: false  # no OTel Collector during tests; spans are still created, just not exported

@@ -30,7 +30,9 @@ class SecurityConfig {
         return http
                 .authorizeExchange(auth -> auth
                         .pathMatchers("/actuator/health/**", "/actuator/info",
-                                "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
+                                "/swagger-ui.html", "/swagger-ui/**", "/webjars/swagger-ui/**", "/v3/api-docs/**",
+                                "/api-docs/**",   // service specs, routed to each service's public /v3/api-docs
+                                "/error").permitAll()
                         .anyExchange().authenticated())
                 .httpBasic(basic -> basic.authenticationManager(
                         auditing(new UserDetailsRepositoryReactiveAuthenticationManager(userDetailsService), eventPublisher)))

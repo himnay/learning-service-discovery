@@ -19,7 +19,7 @@ whole picture (Eureka, gateway, Spring Boot Admin, run order).
 <a id="overview"></a>
 ## <span style="color:hsl(288,80%,58%)">1. 🧩 Overview</span>
 
-- ***Role:*** a plain Spring MVC microservice that registers with Eureka as `USER-SERVICE` and serves a fixed list of users.
+- ***Role:*** a plain Spring MVC microservice that registers with Eureka as `USER-SERVICE` and serves users from its own Postgres (Flyway-seeded, see [docker-compose.yaml](docker-compose.yaml) on host port 5434).
 - ***Port:*** `8081` (`server.port` in [application.yml](src/main/resources/application.yml)).
 - ***Called by:*** `gateway-service` (route `/api/users/**` → `lb://USER-SERVICE`) and ***`order-service` directly*** — its `UserClient` uses base URL `http://USER-SERVICE` resolved through Eureka + Spring Cloud LoadBalancer, sending HTTP Basic credentials on every call (no gateway hop).
 
@@ -31,6 +31,7 @@ whole picture (Eureka, gateway, Spring Boot Admin, run order).
 | Discovery | `spring-cloud-starter-netflix-eureka-client` (Spring Cloud 2025.1.2) |
 | Client-side LB | `spring-cloud-starter-loadbalancer` |
 | Ops | `spring-boot-starter-actuator`, `jolokia-support-springboot` 2.6.3 (version from `learning-bom` 3.1.0) |
+| Tracing | `spring-boot-starter-opentelemetry` → OTLP to [../zipkin-server](../zipkin-server/README.md) |
 | Security | `spring-boot-starter-security` |
 | Scheduling | `spring-boot-starter-quartz` (in-memory job store) |
 | API docs | `springdoc-openapi-starter-webmvc-ui` → http://localhost:8081/swagger-ui.html |
@@ -134,7 +135,7 @@ Defined in [SecurityConfig.java](src/main/java/com/learning/discovery/user/confi
 http
     .authorizeHttpRequests(auth -> auth
         .requestMatchers("/actuator/health/**", "/actuator/info",
-                         "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
+                         "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
         .anyRequest().authenticated())
     .httpBasic(Customizer.withDefaults())
     .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/actuator/**"))
@@ -144,7 +145,7 @@ http
 | Rule | Paths | Why |
 |---|---|---|
 | ***permitAll*** | `/actuator/health/**`, `/actuator/info` | Eureka/SBA/load-balancer health probes without creds |
-| ***permitAll*** | `/swagger-ui/**`, `/v3/api-docs/**` | Swagger UI browsable without login |
+| ***permitAll*** | `/swagger-ui.html`, `/swagger-ui/**`, `/v3/api-docs/**` | Swagger UI browsable without login |
 | ***permitAll*** | `/error` | error responses (e.g. the 404 body) are not turned into 401s |
 | ***authenticated*** | everything else (`/api/**`, other actuator endpoints) | HTTP Basic, user from `spring.security.user.*` |
 | ***CSRF ignored*** | `/api/**`, `/actuator/**` | stateless API clients and SBA POSTs (`/actuator/env`, `/refresh`, `/shutdown`, `/restart`, logger level changes) carry no CSRF token |

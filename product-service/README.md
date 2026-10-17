@@ -33,6 +33,7 @@ every Spring Boot Admin (SBA) view. Shared setup that applies to every module
 |---|---|
 | `spring-boot-starter-webmvc` | Servlet (Tomcat) REST controller |
 | `spring-boot-starter-actuator` | `/actuator/**` endpoints consumed by SBA |
+| `spring-boot-starter-opentelemetry` | Traces over OTLP to [../zipkin-server](../zipkin-server/README.md) |
 | `spring-cloud-starter-netflix-eureka-client` | Registration with `eureka-server`; also brings Spring Cloud Context (`restart`, `refresh`, `env` POST) |
 | `spring-cloud-starter-loadbalancer` | On the classpath for consistency with the other clients; ***product-service makes no outbound calls***, so it is unused here |
 | `spring-boot-starter-security` | HTTP Basic, one in-memory user |
@@ -138,7 +139,7 @@ SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     return http
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/actuator/health/**", "/actuator/info",
-                            "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
+                            "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
                     .anyRequest().authenticated())
             .httpBasic(Customizer.withDefaults())
             .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/actuator/**"))
@@ -153,7 +154,7 @@ SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 |---|---|---|
 | `/actuator/health/**` (also matches `/actuator/health`) | public | Liveness/readiness probes, Eureka/SBA status |
 | `/actuator/info` | public | SBA instance info |
-| `/swagger-ui/**`, `/v3/api-docs/**` | public | Browse the API docs without logging in |
+| `/swagger-ui.html`, `/swagger-ui/**`, `/v3/api-docs/**` | public | Browse the API docs without logging in |
 | `/error` | public | So a `404`/`500` error body is not masked as `401` |
 | everything else (`/api/**`, other `/actuator/**`) | authenticated | Basic auth |
 

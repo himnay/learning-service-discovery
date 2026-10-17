@@ -1,4 +1,9 @@
 package com.learning.discovery.user.model;
 
-public record User(Long id, String name, String email) {
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Table;
+
+// "user" is a reserved SQL word, hence the plural table name.
+@Table("users")
+public record User(@Id Long id, String name, String email) {
 }

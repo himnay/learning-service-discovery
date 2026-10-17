@@ -1,6 +1,9 @@
 package com.learning.discovery.product.controller;
 
 import com.learning.discovery.product.config.SecurityConfig;
+import com.learning.discovery.product.model.Product;
+import com.learning.discovery.product.service.ProductService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -9,7 +12,14 @@ import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+
+import static org.mockito.Mockito.when;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -24,6 +34,20 @@ class ProductControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private ProductService productService;
+
+    @BeforeEach
+    void stubProducts() {
+        List<Product> products = List.of(
+                new Product(201L, "Keyboard", new BigDecimal("49.99")),
+                new Product(202L, "Monitor", new BigDecimal("199.99")),
+                new Product(203L, "Mouse", new BigDecimal("19.99")));
+        when(productService.findAll()).thenReturn(products);
+        products.forEach(product -> when(productService.findById(product.id())).thenReturn(Optional.of(product)));
+        when(productService.findById(999L)).thenReturn(Optional.empty());
+    }
 
     @Test
     void getProductsReturnsSeedList() throws Exception {

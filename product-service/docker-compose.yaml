@@ -1,0 +1,15 @@
+# Postgres for product-service, started automatically by spring-boot-docker-compose on application startup.
+# spring.docker.compose.file=product-service/docker-compose.yaml points here, relative to the working directory (repo
+# root for IntelliJ run configs and spring-boot:run). Its own compose project keeps it apart from the other
+# modules' databases. Boot reads the mapped port, so no datasource URL is configured.
+name: product-db
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: products
+      POSTGRES_USER: products
+      POSTGRES_PASSWORD: products
+    ports:
+      - "5435:5432"   # 5435 on the host: 5433/5434 are order-/user-service's Postgres

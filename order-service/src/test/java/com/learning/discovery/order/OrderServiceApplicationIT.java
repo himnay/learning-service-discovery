@@ -141,4 +141,20 @@ class OrderServiceApplicationIT {
                 .expectStatus().is2xxSuccessful()
                 .expectBody().jsonPath("$.status").isEqualTo("UP");
     }
+
+    @Test
+    void openApiSpecIsPublicAndDeclaresBasicAuth() {
+        anonymousClient().get().uri("/v3/api-docs").exchange()
+                .expectStatus().is2xxSuccessful()
+                .expectBody()
+                .jsonPath("$.components.securitySchemes.basicAuth.scheme").isEqualTo("basic")
+                .jsonPath("$.servers[0].url").isEqualTo("/")
+                .jsonPath("$.paths['/api/orders/{id}'].get.responses['404']").exists();
+    }
+
+    @Test
+    void swaggerUiIsPublic() {
+        // /swagger-ui.html redirects to /swagger-ui/index.html; the client follows it, so both must be public
+        anonymousClient().get().uri("/swagger-ui.html").exchange().expectStatus().is2xxSuccessful();
+    }
 }

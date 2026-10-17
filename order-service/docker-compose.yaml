@@ -1,0 +1,15 @@
+# Postgres for order-service, started automatically by spring-boot-docker-compose on application startup.
+# spring.docker.compose.file=order-service/docker-compose.yaml points here, relative to the working directory (repo
+# root for IntelliJ run configs and spring-boot:run). Its own compose project keeps it apart from the other
+# modules' databases. Boot reads the mapped port, so no datasource URL is configured.
+name: order-db
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+    ports:
+      - "5433:5432"   # 5433 on the host so it doesn't clash with other local Postgres stacks

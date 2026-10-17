@@ -30,6 +30,8 @@ README; this file covers only what `gateway-service` itself implements.
 | Gateway | `spring-cloud-starter-gateway-server-webflux` | Spring Cloud 2025.1.2 (via root [pom.xml](../pom.xml) / `super-pom` 1.2.1) |
 | Discovery | `spring-cloud-starter-netflix-eureka-client` | Spring Cloud BOM |
 | Ops | `spring-boot-starter-actuator` | Spring Boot 4.1 |
+| Tracing | `spring-boot-starter-opentelemetry` → OTLP to [../zipkin-server](../zipkin-server/README.md) | Spring Boot 4.1 |
+| API docs | `springdoc-openapi-starter-webflux-ui` → aggregated Swagger UI at http://localhost:8080/swagger-ui.html (specs routed from `/api-docs/{service}`) | springdoc 3.1 |
 | Auth | `spring-boot-starter-security` | Spring Boot BOM |
 | Scheduling demo | `spring-boot-starter-quartz` | Spring Boot BOM |
 | Tests | `spring-boot-starter-test`, `spring-boot-webtestclient`, `spring-boot-starter-security-test` | Spring Boot BOM |

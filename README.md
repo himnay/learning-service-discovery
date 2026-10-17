@@ -15,25 +15,37 @@
 
 Eureka service discovery demo. 6 Maven modules: 1 Eureka registry + 3 REST
 microservices + 1 API gateway + 1 Spring Boot Admin dashboard, all registering
-with the registry.
+with the registry. Plus `zipkin-server`, a Docker Compose stack (OpenTelemetry
+Collector + Zipkin) for distributed tracing.
 
 <a id="modules"></a>
 ## <span style="color:hsl(288,80%,58%)">1. 🧩 Modules</span>
 
 | Module (README)   | Port | Role                          | REST API                          | Swagger UI                              |
-|-------------------|------|--------------------------------|------------------------------------|------------------------------------------|
+|---------------------|-------|---------------------------------|-------------------------------------|-------------------------------------------|
 | [`eureka-server`](eureka-server/README.md) | 8761 | Service registry / dashboard  | —                                   | —                                        |
 | [`user-service`](user-service/README.md) | 8081 | Eureka client                 | `GET /api/users`, `GET /api/users/{id}`       | http://localhost:8081/swagger-ui.html    |
 | [`order-service`](order-service/README.md) | 8082 | Eureka client                 | `GET /api/orders`, `GET /api/orders/{id}`, `GET /api/orders/{id}/with-user` (calls `user-service` directly, load-balanced, no gateway) | http://localhost:8082/swagger-ui.html    |
 | [`product-service`](product-service/README.md) | 8083 | Eureka client                 | `GET /api/products`, `GET /api/products/{id}` | http://localhost:8083/swagger-ui.html    |
-| [`gateway-service`](gateway-service/README.md) | 8080 | Eureka client + API gateway    | routes `/api/users/**`, `/api/orders/**`, `/api/products/**` to the 3 services above via `lb://` | —          |
+| [`gateway-service`](gateway-service/README.md) | 8080 | Eureka client + API gateway    | routes `/api/users/**`, `/api/orders/**`, `/api/products/**` to the 3 services above via `lb://` | http://localhost:8080/swagger-ui.html — aggregated, one dropdown entry per service |
 | [`admin-server`](admin-server/README.md) | 8084 | Spring Boot Admin — discovers instances via Eureka, dashboard at http://localhost:8084 (login `admin`/`admin`) | — | — |
+| [`zipkin-server`](zipkin-server/README.md) | 9411 (+ 4317/4318 OTLP) | Tracing backend, Docker Compose only (no Java): OTel Collector → Zipkin, UI at http://localhost:9411 | — | — |
 
 Every module is secured with HTTP Basic, one shared user `admin`/`admin`
 (override with `ACTUATOR_USER` / `ACTUATOR_PASSWORD`). Only
 `/actuator/health` and `/actuator/info` are public — see
-[§10](#security-and-sba-features). `order-service` needs Docker: it starts
-Postgres from the root `docker-compose.yaml` on host port 5433.
+[§10](#security-and-sba-features). `order-service`, `user-service` and
+`product-service` need Docker: each starts its own Postgres from the
+`docker-compose.yaml` in its module directory (host ports 5433, 5434, 5435).
+The Insomnia collection for the gateway routes is
+[`gateway-service/insomnia_collection.json`](gateway-service/insomnia_collection.json).
+
+The gateway and the 3 REST services export traces over OTLP
+(`spring-boot-starter-opentelemetry`); start `zipkin-server` to see one request
+followed across gateway → order-service → user-service — see
+[zipkin-server/README.md](zipkin-server/README.md). Each REST service publishes
+its OpenAPI spec at `/v3/api-docs` (HTTP Basic declared, so Swagger UI's
+***Authorize*** button works); the gateway's Swagger UI shows all three.
 
 <a id="how-the-gateway-finds-services-via-eureka"></a>
 ## <span style="color:hsl(66,80%,50%)">2. 🔎 How the gateway finds services via Eureka</span>
@@ -249,9 +261,11 @@ super-pom (com.org.llm:super-pom:1.2.1)   ← corporate parent (Boot 4.1.1, Java
 ## <span style="color:hsl(256,80%,58%)">4. 🚀 Run order</span>
 
 Eureka server must be up first so the other clients have somewhere to register.
+The tracing stack is optional and can start at any time.
 
 ```bash
 cd learning-service-discovery
+(cd zipkin-server && docker compose up -d)   # optional: OTel Collector + Zipkin
 mvn -pl eureka-server spring-boot:run &
 # wait for it to come up, then:
 mvn -pl user-service spring-boot:run &
@@ -262,6 +276,9 @@ mvn -pl admin-server spring-boot:run &
 ```
 
 Or build everything first: `mvn clean install`, then run each module's jar.
+`java -jar` skips `spring-boot-docker-compose` (the repackaged jar excludes it), so
+for user/order/product-service start the module's `docker-compose.yaml` yourself
+and pass `spring.datasource.*`, or use `spring-boot:run`.
 
 <a id="verify"></a>
 ## <span style="color:hsl(33,80%,58%)">5. ✅ Verify</span>

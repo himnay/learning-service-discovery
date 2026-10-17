@@ -1,6 +1,10 @@
 package com.learning.discovery.product.model;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Table;
+
 import java.math.BigDecimal;
 
-public record Product(Long id, String name, BigDecimal price) {
+@Table("products")
+public record Product(@Id Long id, String name, BigDecimal price) {
 }

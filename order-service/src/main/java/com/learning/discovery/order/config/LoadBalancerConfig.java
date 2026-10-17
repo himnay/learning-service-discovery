@@ -1,5 +1,6 @@
 package com.learning.discovery.order.config;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,11 +25,15 @@ class LoadBalancerConfig {
                 .requestFactory(boundedTimeouts());
     }
 
+    // RestClient.builder() is not Boot's auto-configured builder, so it has no ObservationRegistry by
+    // default. Setting it makes each call to user-service a client span that sends the traceparent
+    // header, so gateway -> order-service -> user-service shows up as one trace in Zipkin.
     @Bean
     @LoadBalanced
-    RestClient.Builder loadBalancedRestClientBuilder() {
+    RestClient.Builder loadBalancedRestClientBuilder(ObservationRegistry observationRegistry) {
         return RestClient.builder()
-                .requestFactory(boundedTimeouts());
+                .requestFactory(boundedTimeouts())
+                .observationRegistry(observationRegistry);
     }
 
     /** Bounded connect/read timeouts — the JDK client's default read timeout is infinite, so a hung upstream would pin the calling thread. */

@@ -25,6 +25,11 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
+            <!-- Micrometer Tracing + OTel bridge + OTLP exporter: spans go to zipkin-server/ (OTel Collector -> Zipkin) -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
@@ -122,7 +127,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- Run from the repo root so spring-boot-docker-compose finds ../docker-compose.yaml -->
+                    <!-- Same working directory as IDE run configs (repo root), so spring.docker.compose.file resolves -->
                     <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
                 </configuration>
             </plugin>

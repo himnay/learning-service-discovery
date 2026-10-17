@@ -53,4 +53,14 @@ class GatewayServiceApplicationIT {
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.name").isEqualTo("heartbeatJob");
     }
+
+    @Test
+    void aggregatedSwaggerUiListsTheServiceSpecs() {
+        webTestClient.get().uri("/swagger-ui.html").exchange().expectStatus().is3xxRedirection();
+        webTestClient.get().uri("/v3/api-docs/swagger-config").exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.urls.length()").isEqualTo(3)
+                .jsonPath("$.urls[?(@.name == 'order-service')].url").isEqualTo("/api-docs/order-service");
+    }
 }
