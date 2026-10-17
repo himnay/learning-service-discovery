@@ -1,5 +1,6 @@
 server:
   port: 8084
+  shutdown: graceful   # Boot 3.4+ default, explicit here: finish in-flight requests (max spring.lifecycle.timeout-per-shutdown-phase, 30 s) before stopping
 
 spring:
   application:

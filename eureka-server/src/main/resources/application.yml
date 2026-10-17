@@ -1,5 +1,6 @@
 server:
   port: 8761
+  shutdown: graceful   # Boot 3.4+ default, explicit here: finish in-flight requests (max spring.lifecycle.timeout-per-shutdown-phase, 30 s) before stopping
 
 spring:
   application:
@@ -13,7 +14,7 @@ spring:
     job-store-type: memory
 
 eureka:
-  environment: ${EUREKA_ENVIRONMENT:sit}   # dashboard header "Environment" (default: test)
+  environment: ${EUREKA_ENVIRONMENT:SIT}   # dashboard header "Environment" (default: test)
   datacenter: ${EUREKA_DATACENTER:TX}      # dashboard header "Data center" (default: default)
   instance:
     lease-renewal-interval-in-seconds: 10      # heartbeat every 10 s (default 30)
