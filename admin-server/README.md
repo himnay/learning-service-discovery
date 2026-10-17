@@ -427,4 +427,97 @@ mvn -pl admin-server verify -Dit.test=AdminServerApplicationIT
 <a id="qa"></a>
 ## <span style="color:hsl(0,80%,58%)">11. ❓ Q&A</span>
 
-Questions go here.
+**Q1. Does Spring Boot Admin poll, or do the clients push?**
+
+- ***SBA polls.*** In this repo nothing is pushed to SBA at all.
+- Two separate steps:
+
+| Step | Push or pull | In this repo |
+|---|---|---|
+| **Finding instances** (registration) | either SBA-client **push** or **discovery pull** | **pull from Eureka** — services have no `spring-boot-admin-starter-client` |
+| **Status, info, metrics** | **always pull** by the SBA server | SBA calls each service's `/actuator/...` |
+
+- ***Discovery*** — admin-server is a Eureka client; each registry refresh (`registry-fetch-interval-seconds`, default 30 s) adds new instances and drops removed ones.
+- ***What the server polls*** (as of SBA 4.1, 2026):
+
+| What | Endpoint | Default | Property |
+|---|---|---|---|
+| Status (UP/DOWN/OFFLINE) | `/actuator/health` | 10 s | `spring.boot.admin.monitor.status-interval` |
+| Info panel | `/actuator/info` | 1 min | `spring.boot.admin.monitor.info-interval` |
+| Request timeout | — | 10 s | `spring.boot.admin.monitor.default-timeout` |
+
+- ***Failing instances are polled less often*** — back-off up to `status-max-backoff`.
+- ***OFFLINE ≠ DOWN*** — OFFLINE: `/actuator/health` unreachable (process dead, network, auth); DOWN: the app answered "DOWN".
+- ***Notifications fire on a status change found by polling*** — up to ~10 s plus the Eureka refresh delay.
+- ***UI views fetch on demand*** — Metrics, Threads, Logfile (~1 s byte-range polling) etc. are fetched by the browser through `/instances/{id}/actuator/**` only while the page is open; otherwise only health/info polling runs.
+- ***Consequences*** — services don't depend on SBA (SBA down = no impact on them); SBA must reach every instance (right IP via `prefer-ip-address`, credentials from Eureka metadata), or it shows OFFLINE; load is one `/health` call per instance every 10 s.
+
+**Q2. If we don't use Eureka, do we have to list each client in SBA?**
+
+- ***No — only with the static-list option.*** Four ways:
+
+| Option | Where configured | List every instance? | Fits |
+|---|---|---|---|
+| **SBA client** (`spring-boot-admin-starter-client`) | each app: `spring.boot.admin.client.url` | no — apps self-register | plain VMs, no registry, apps change often |
+| **Static list** (`SimpleDiscoveryClient`) | SBA server: `spring.cloud.discovery.client.simple.instances.*` | **yes**, by hand | 2–3 fixed hosts |
+| **Other registry** (Kubernetes, Consul, Zookeeper) | SBA server: matching Spring Cloud discovery starter | no | Kubernetes (needs RBAC to list services/pods/endpoints) |
+| **Manual** `POST /instances` | SBA REST API (script/CI) | per call | one-off or non-Spring apps with actuator-compatible endpoints |
+
+SBA-client config on each app:
+
+```yaml
+spring:
+  boot:
+    admin:
+      client:
+        url: http://localhost:8084                  # SBA server
+        username: ${ACTUATOR_USER:admin}            # to log in to SBA's /instances
+        password: ${ACTUATOR_PASSWORD:admin}
+        instance:
+          prefer-ip: true
+          metadata:                                 # SBA uses these to poll this app's actuator
+            user.name: ${spring.security.user.name}
+            user.password: ${spring.security.user.password}
+```
+
+Static list on the SBA server:
+
+```yaml
+spring:
+  cloud:
+    discovery:
+      client:
+        simple:
+          instances:
+            order-service:
+              - uri: http://localhost:8082
+                metadata:
+                  management.context-path: /actuator
+                  user.name: admin
+                  user.password: admin
+            user-service:
+              - uri: http://localhost:8081
+              - uri: http://localhost:8091          # 2nd instance
+```
+
+- ***SBA client*** — POSTs `/instances` at startup and every 10 s (keep-alive), deregisters on shutdown; if SBA is down the app keeps working and only logs a retry warning. SBA's security must accept that POST (here CSRF already ignores `/instances`).
+- ***Static list*** — no change in the services, but scaling or a port change means editing SBA's config and restarting it.
+
+**Q3. So without Eureka it's a push from the client?**
+
+- ***Only the registration is pushed, and only with the SBA client. Monitoring is still pulled.***
+
+| Step | With Eureka (this repo) | Without Eureka, SBA client |
+|---|---|---|
+| "I exist, here's my URL" | SBA **pulls** the list from Eureka | client **pushes** `POST /instances` at startup + every 10 s |
+| Health / status | SBA **pulls** `/actuator/health` every 10 s | SBA **pulls** `/actuator/health` every 10 s |
+| Info, metrics, logfile, heap dump, … | SBA **pulls** `/actuator/*` | SBA **pulls** `/actuator/*` |
+
+```text
+client ── POST /instances {name, healthUrl, managementUrl, metadata} ──▶ SBA      (push: registration only)
+client ◀── GET /actuator/health, /info, /metrics … ───────────────────── SBA      (pull: everything else)
+```
+
+- ***The push carries only name, URLs and metadata*** (e.g. credentials) — no health or metrics data.
+- ***SBA must still reach each client's `/actuator`*** — the network/firewall has to allow SBA → app in both setups.
+- ***Static list, Kubernetes and Consul involve no push at all.***
