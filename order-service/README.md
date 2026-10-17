@@ -86,7 +86,8 @@ curl -u admin:admin http://localhost:8082/api/orders/101/with-user
 
 ```bash
 # from the repo root
-mvn -pl eureka-server spring-boot:run &
+mvn -pl eureka-server-1 spring-boot:run &
+mvn -pl eureka-server-2 spring-boot:run &
 mvn -pl user-service  spring-boot:run &     # only needed for /with-user
 mvn -pl order-service spring-boot:run
 ```

@@ -4,4 +4,4 @@ eureka:
 management:
   tracing:
     export:
-      enabled: false  # no OTel Collector during tests; spans are still created, just not exported
+      enabled: false  # no zipkin-server during tests; spans are still created, just not exported

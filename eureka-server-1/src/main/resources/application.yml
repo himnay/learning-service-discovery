@@ -1,10 +1,13 @@
+# Peer 1 of 2 — eureka-server-2 is the same code with port 8762 and the peer URL flipped.
+# Peers must have distinct hostnames — Eureka skips any peer URL whose host equals its own (the port is
+# ignored) — so node 1 is "localhost" and node 2 "127.0.0.1": both resolve everywhere, no /etc/hosts entry.
 server:
   port: 8761
   shutdown: graceful   # Boot 3.4+ default, explicit here: finish in-flight requests (max spring.lifecycle.timeout-per-shutdown-phase, 30 s) before stopping
 
 spring:
   application:
-    name: eureka-server
+    name: eureka-server   # same app name on both peers: one EUREKA-SERVER app with 2 instances (dashboard replica check needs it)
   security:
     user:
       name: ${ACTUATOR_USER:admin}
@@ -27,16 +30,18 @@ eureka:
       tags.environment: ${APP_ENV:local}   # SBA shows tags.* as badges in the application list
       tags.tier: infra
   client:
-    # self-register so SBA (which discovers apps from Eureka) lists the registry too;
-    # no need to fetch the registry — this node *is* the registry
+    # register with the peer (so SBA lists the registry too) and replicate through it
     register-with-eureka: true
-    fetch-registry: false
+    fetch-registry: true   # on startup this node copies its registry from the peer; without it a restart comes up empty
     service-url:
-      defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@${eureka.instance.hostname}:${server.port}/eureka/
+      defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@127.0.0.1:8762/eureka/
   server:
-    # false locally so stopped instances vanish fast; true in prod (application-prod.yml / env var)
-    enable-self-preservation: ${EUREKA_SELF_PRESERVATION:false}
-    renewal-percent-threshold: ${EUREKA_RENEWAL_THRESHOLD:0.85}   # self-preservation trips below this share of expected renewals
+    # on everywhere: a network blip can't mass-evict the registry (and the dashboard drops the
+    # "SELF PRESERVATION MODE IS TURNED OFF" banner); EUREKA_SELF_PRESERVATION=false to opt out
+    enable-self-preservation: ${EUREKA_SELF_PRESERVATION:true}
+    # self-preservation trips below this share of expected renewals; 0.5 locally so killing one or two
+    # services in a ~8-instance demo still evicts them (prod profile: 0.85)
+    renewal-percent-threshold: ${EUREKA_RENEWAL_THRESHOLD:0.5}
     expected-client-renewal-interval-seconds: 10                  # must match clients' lease-renewal-interval-in-seconds
     eviction-interval-timer-in-ms: 30000                          # eviction sweep every 30 s (default 60 s)
 
@@ -49,7 +54,7 @@ info:   # published by /actuator/info (needs management.info.env.enabled) → SB
 
 logging:
   file:
-    name: logs/${spring.application.name}.log   # enables /actuator/logfile (SBA Logfile view)
+    name: logs/eureka-server-1.log   # enables /actuator/logfile (SBA Logfile view)
 
 management:
   info:   # extra contributors shown in SBA Details → Info

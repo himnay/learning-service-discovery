@@ -15,21 +15,21 @@
 
 Eureka service discovery demo. 6 Maven modules: 1 Eureka registry + 3 REST
 microservices + 1 API gateway + 1 Spring Boot Admin dashboard, all registering
-with the registry. Plus `zipkin-server`, a Docker Compose stack (OpenTelemetry
-Collector + Zipkin) for distributed tracing.
+with the registry. Plus `zipkin-server`, a Zipkin tracing server module
+(Spring Boot 3.5, `@EnableZipkinServer`, OTLP receiver).
 
 <a id="modules"></a>
 ## <span style="color:hsl(288,80%,58%)">1. 🧩 Modules</span>
 
 | Module (README)   | Port | Role                          | REST API                          | Swagger UI                              |
 |---------------------|-------|---------------------------------|-------------------------------------|-------------------------------------------|
-| [`eureka-server`](eureka-server/README.md) | 8761 | Service registry / dashboard  | —                                   | —                                        |
+| [`eureka-server-1`](eureka-server-1/README.md), [`eureka-server-2`](eureka-server-2/README.md) | 8761, 8762 | Service registry / dashboard — 2 replicating peers | —                                   | —                                        |
 | [`user-service`](user-service/README.md) | 8081 | Eureka client                 | `GET /api/users`, `GET /api/users/{id}`       | http://localhost:8081/swagger-ui.html    |
 | [`order-service`](order-service/README.md) | 8082 | Eureka client                 | `GET /api/orders`, `GET /api/orders/{id}`, `GET /api/orders/{id}/with-user` (calls `user-service` directly, load-balanced, no gateway) | http://localhost:8082/swagger-ui.html    |
 | [`product-service`](product-service/README.md) | 8083 | Eureka client                 | `GET /api/products`, `GET /api/products/{id}` | http://localhost:8083/swagger-ui.html    |
 | [`gateway-service`](gateway-service/README.md) | 8080 | Eureka client + API gateway    | routes `/api/users/**`, `/api/orders/**`, `/api/products/**` to the 3 services above via `lb://` | http://localhost:8080/swagger-ui.html — aggregated, one dropdown entry per service |
 | [`admin-server`](admin-server/README.md) | 8084 | Spring Boot Admin — discovers instances via Eureka, dashboard at http://localhost:8084 (login `admin`/`admin`) | — | — |
-| [`zipkin-server`](zipkin-server/README.md) | 9411 (+ 4317/4318 OTLP) | Tracing backend, Docker Compose only (no Java): OTel Collector → Zipkin, UI at http://localhost:9411 | — | — |
+| [`zipkin-server`](zipkin-server/README.md) | 9411 | Zipkin server (`@EnableZipkinServer`, own Spring Boot 3.5 build, no parent), Eureka client, takes OTLP at `/v1/traces`, UI at http://localhost:9411 | — | — |
 
 Every module is secured with HTTP Basic, one shared user `admin`/`admin`
 (override with `ACTUATOR_USER` / `ACTUATOR_PASSWORD`). Only
@@ -41,7 +41,7 @@ The Insomnia collection for the gateway routes is
 [`gateway-service/insomnia_collection.json`](gateway-service/insomnia_collection.json).
 
 The gateway and the 3 REST services export traces over OTLP
-(`spring-boot-starter-opentelemetry`); start `zipkin-server` to see one request
+(`spring-boot-starter-opentelemetry`) straight to `zipkin-server`; start it to see one request
 followed across gateway → order-service → user-service — see
 [zipkin-server/README.md](zipkin-server/README.md). Each REST service publishes
 its OpenAPI spec at `/v3/api-docs` (HTTP Basic declared, so Swagger UI's
@@ -265,9 +265,10 @@ The tracing stack is optional and can start at any time.
 
 ```bash
 cd learning-service-discovery
-(cd zipkin-server && docker compose up -d)   # optional: OTel Collector + Zipkin
-mvn -pl eureka-server spring-boot:run &
-# wait for it to come up, then:
+mvn -pl zipkin-server spring-boot:run &      # optional: tracing UI at http://localhost:9411
+mvn -pl eureka-server-1 spring-boot:run &
+mvn -pl eureka-server-2 spring-boot:run &
+# wait for them to come up, then:
 mvn -pl user-service spring-boot:run &
 mvn -pl order-service spring-boot:run &
 mvn -pl product-service spring-boot:run &
@@ -283,7 +284,7 @@ and pass `spring.datasource.*`, or use `spring-boot:run`.
 <a id="verify"></a>
 ## <span style="color:hsl(33,80%,58%)">5. ✅ Verify</span>
 
-- **Eureka dashboard**: http://localhost:8761 — lists `USER-SERVICE`,
+- **Eureka dashboards**: http://localhost:8761 and http://localhost:8762 (same registry, replicated) — list `USER-SERVICE`,
   `ORDER-SERVICE`, `PRODUCT-SERVICE`, `GATEWAY-SERVICE`, `ADMIN-SERVER` once all
   5 clients register (takes a few seconds after startup; default renewal interval).
 - **Spring Boot Admin dashboard**: http://localhost:8084 — same instances as
@@ -342,8 +343,8 @@ Run all tests: `mvn clean verify` (failsafe plugin from `super-pom` runs the
 A different `server.port` means a different Eureka `instanceId` (default
 `host:appName:port`) — it's registered as a brand-new instance, not an
 update of the old one. The old entry is only removed once its lease expires;
-`eureka-server` has self-preservation turned off in this repo, so eviction
-happens promptly after 3 missed heartbeats (~90s). The gateway's own local
+`eureka-server` has self-preservation on with a low local threshold (0.5), so eviction
+happens about 30s after the last heartbeat unless many instances die at once. The gateway's own local
 registry cache picks up the new instance on its next fetch cycle (every 30s
 by default). In the gap between the old instance dying and the gateway's
 cache refreshing, `lb://` may still resolve to the dead port and a call can
@@ -423,29 +424,30 @@ routing to a dead instance for zero downtime on lookups — the opposite
 choice (CP, e.g. a strongly-consistent registry) would instead block or
 error the lookup during any disagreement, which is worse for a system where
 "probably still up" beats "definitely correct but unavailable." The nuance:
-this repo runs a **single** `eureka-server` node with no peers
-(`fetch-registry: false`; it registers only with itself so Spring Boot Admin can see it) — it's a SPOF, not
-a cluster, so the AP/CP tradeoff around peer replication doesn't even come
-into play locally. A real deployment runs 2–3 peer-aware `eureka-server`
-nodes precisely so the AP guarantee (keep serving during a partition) has
-something to fail over to.
+this repo runs **two** peer `eureka-server` nodes (`eureka-server-1` :8761,
+`eureka-server-2` :8762, two modules with the same code). Replication between them is
+asynchronous and best-effort — a registration hits one node and reaches the
+other moments later, and during a partition both keep serving their own,
+possibly diverging, view. That's the AP choice in action, and the reason
+clients list both URLs in `defaultZone`: one node down, they fail over.
 
-**What does `enable-self-preservation: false` actually protect against, and
-is turning it off ever wrong?**
+**What does self-preservation protect against, and is turning it off ever
+wrong?**
 
 Self-preservation is a circuit breaker for the registry itself: if the rate
 of incoming heartbeats across *all* instances drops below ~85% of expected,
 Eureka assumes it's suffering a network partition (clients are still alive,
 just can't reach the registry) rather than a mass outage, and stops evicting
 — because evicting during a real partition would wrongly kill every
-instance's registration. `eureka-server`'s yml disables this
-(`enable-self-preservation: false`) so instances stopped during a local demo are
-evicted once their lease expires instead of lingering as zombie entries. The tradeoff: on a real network
+instance's registration. `eureka-server` keeps it on (that also removes the
+dashboard's `THE SELF PRESERVATION MODE IS TURNED OFF...` banner) but sets
+`renewal-percent-threshold` to 0.5 locally, so killing one or two services in a
+demo still gets them evicted instead of lingering as zombie entries. Turning it
+off (`EUREKA_SELF_PRESERVATION=false`) evicts promptly no matter what. The tradeoff: on a real network
 with actual partitions, disabling it means a transient blip can mass-evict
 every healthy instance simultaneously, and every client (including the
-gateway) suddenly sees an empty registry for that service. Turning it off
-is correct for single-host local dev (this repo); production Eureka
-deployments almost always leave it on.
+gateway) suddenly sees an empty registry for that service. Off is tolerable
+for single-host local dev; production Eureka deployments almost always leave it on.
 
 **Two `user-service` instances register with the same `instanceId` (e.g.
 identical `hostname:port` — common in containers with the same internal

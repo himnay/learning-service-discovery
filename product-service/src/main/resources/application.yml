@@ -23,7 +23,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@localhost:8761/eureka/
+      defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@localhost:8761/eureka/,http://${spring.security.user.name}:${spring.security.user.password}@127.0.0.1:8762/eureka/
   instance:
     lease-renewal-interval-in-seconds: 10      # heartbeat every 10 s (default 30)
     lease-expiration-duration-in-seconds: 30   # evicted 30 s after the last heartbeat (default 90)
@@ -53,8 +53,8 @@ management:
     tracing:
       export:
         otlp:
-          # OTLP/HTTP receiver of the OTel Collector in zipkin-server/, which forwards to Zipkin (http://localhost:9411)
-          endpoint: ${OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+          # OTLP/HTTP receiver of zipkin-server (zipkin-module-otel), same port as the Zipkin UI
+          endpoint: ${OTLP_TRACES_ENDPOINT:http://localhost:9411/v1/traces}
   otlp:
     metrics:
       export:

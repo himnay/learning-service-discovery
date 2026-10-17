@@ -68,7 +68,8 @@ Dependencies in [pom.xml](pom.xml):
 
 ```bash
 cd learning-service-discovery
-mvn -pl eureka-server spring-boot:run &
+mvn -pl eureka-server-1 spring-boot:run &
+mvn -pl eureka-server-2 spring-boot:run &
 # wait for http://localhost:8761, then:
 mvn -pl admin-server spring-boot:run
 ```

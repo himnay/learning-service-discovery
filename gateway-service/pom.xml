@@ -29,7 +29,7 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
-            <!-- Micrometer Tracing + OTel bridge + OTLP exporter: spans go to zipkin-server/ (OTel Collector -> Zipkin) -->
+            <!-- Micrometer Tracing + OTel bridge + OTLP exporter: spans go to zipkin-server's /v1/traces -->
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-opentelemetry</artifactId>
         </dependency>

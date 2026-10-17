@@ -9,9 +9,9 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// no self-registration in tests: the default defaultZone points at :8761, not the random test port
+// standalone in tests: don't register with or fetch from the peer, which isn't running
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "eureka.client.register-with-eureka=false")
+        properties = {"eureka.client.register-with-eureka=false", "eureka.client.fetch-registry=false"})
 class EurekaServerApplicationTests {
 
     @LocalServerPort
@@ -54,6 +54,15 @@ class EurekaServerApplicationTests {
         restTestClient.get().uri("/eureka/apps").accept(MediaType.APPLICATION_JSON)
                 .headers(h -> h.setBasicAuth("admin", "admin")).exchange()
                 .expectStatus().isOk();
+    }
+
+    @Test
+    void heartbeatForUnknownInstanceIsBare404() {
+        // a JSON error body here makes Eureka clients fail to parse it and never re-register
+        restTestClient.put().uri("/eureka/apps/DEMO-APP/no-such-instance?status=UP&lastDirtyTimestamp=1")
+                .headers(h -> h.setBasicAuth("admin", "admin")).accept(MediaType.APPLICATION_JSON).exchange()
+                .expectStatus().isNotFound()
+                .expectBody().isEmpty();
     }
 
     @Test
