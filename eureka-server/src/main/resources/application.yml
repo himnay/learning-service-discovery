@@ -13,6 +13,8 @@ spring:
     job-store-type: memory
 
 eureka:
+  environment: ${EUREKA_ENVIRONMENT:sit}   # dashboard header "Environment" (default: test)
+  datacenter: ${EUREKA_DATACENTER:TX}      # dashboard header "Data center" (default: default)
   instance:
     hostname: localhost
     metadata-map:

@@ -29,6 +29,7 @@ The service registry for the [learning-service-discovery](../README.md) demo. Ev
 - ***Registers with itself*** — `eureka.client.register-with-eureka: true` so `admin-server` (which discovers apps *from* Eureka) lists `EUREKA-SERVER` alongside the other services.
 - ***Does not fetch the registry*** — `eureka.client.fetch-registry: false`: this node *is* the registry, it has no need for a client-side cache of it.
 - ***Self-preservation off*** — `eureka.server.enable-self-preservation: false` so instances you stop locally are evicted once their lease expires instead of lingering. Right for single-host dev, usually wrong in production — tradeoffs in the root [FAQ](../README.md#faq).
+- ***Dashboard header*** — `eureka.environment: ${EUREKA_ENVIRONMENT:sit}` and `eureka.datacenter: ${EUREKA_DATACENTER:TX}` replace the defaults `test` / `default` shown as "Environment" / "Data center" on the dashboard. Labels only — they change no registry behaviour.
 - ***No other eviction tuning*** — lease renewal/expiry and the eviction timer run on Eureka defaults; only self-preservation is overridden.
 - ***Hostname*** — `eureka.instance.hostname: localhost`, also used to build `defaultZone`.
 - ***Startup banner*** — [`banner.txt`](src/main/resources/banner.txt) prints project metadata and the dashboard URL.
