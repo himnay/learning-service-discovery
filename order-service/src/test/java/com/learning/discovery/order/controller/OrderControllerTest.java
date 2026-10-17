@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,9 +69,22 @@ class OrderControllerTest {
     }
 
     @Test
-    void getOrderByUnknownIdReturns404() throws Exception {
+    void getOrderByUnknownIdReturns404ProblemDetail() throws Exception {
         mockMvc.perform(get("/api/orders/999"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.title").value("Not Found"))
+                .andExpect(jsonPath("$.detail").value("Order 999 not found"))
+                .andExpect(jsonPath("$.instance").value("/api/orders/999"));
+    }
+
+    @Test
+    void nonNumericIdReturns400ProblemDetail() throws Exception {
+        mockMvc.perform(get("/api/orders/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
@@ -98,5 +112,17 @@ class OrderControllerTest {
     void getOrdersWithoutCredentialsReturns401() throws Exception {
         mockMvc.perform(get("/api/orders").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unexpectedExceptionReturns500ProblemDetailWithoutStackTrace() throws Exception {
+        when(userClient.fetchUser(1L)).thenThrow(new IllegalStateException("boom: secret internals"));
+
+        mockMvc.perform(get("/api/orders/101/with-user"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.detail").value("Unexpected error, see the order-service logs"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("secret internals"))));
     }
 }
