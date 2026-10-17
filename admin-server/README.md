@@ -521,3 +521,20 @@ client ◀── GET /actuator/health, /info, /metrics … ───────
 - ***The push carries only name, URLs and metadata*** (e.g. credentials) — no health or metrics data.
 - ***SBA must still reach each client's `/actuator`*** — the network/firewall has to allow SBA → app in both setups.
 - ***Static list, Kubernetes and Consul involve no push at all.***
+
+**Q4. Does Eureka save SBA from calling every instance, by replacing those calls with one call to Eureka?**
+
+- ***Partly — Eureka replaces only the discovery calls, not health polling.*** SBA still calls every instance itself.
+
+| Traffic (N instances) | SBA client (push) | Eureka discovery (this repo) |
+|---|---|---|
+| Discovery / registration | **N** `POST /instances` to SBA every 10 s | **1** registry fetch from Eureka every 30 s (delta, only changes) |
+| Health polling | **N** `GET /actuator/health` every 10 s | **N** `GET /actuator/health` every 10 s (same) |
+| Info polling | N every 1 min | N every 1 min (same) |
+| UI views (metrics, logfile…) | on demand, per instance | on demand, per instance (same) |
+
+- ***Why SBA doesn't just use Eureka's status*** — a Eureka heartbeat only proves the process is alive; SBA's status is `/actuator/health`, the aggregate of all health indicators (e.g. order-service's `db` and `ordersCache`), so it shows DOWN when Postgres fails while Eureka still says UP.
+- ***Eureka gives SBA the URLs, not the data*** — `healthCheckUrl`, management port and metadata tell SBA where to poll; metrics, logfile, heap dump etc. exist only on the instance.
+- ***`eureka.client.healthcheck.enabled: true` doesn't change this*** — it feeds actuator health into the Eureka UP/DOWN status, but SBA still polls for details.
+- ***Reducing the load*** — `spring.boot.admin.monitor.status-interval: 30s` (default 10 s; alerts arrive later), `info-interval: 5m`. It only matters with hundreds of instances: the default is one light GET per instance every 10 s.
+- ***Heartbeats aren't extra cost for SBA*** — services send them anyway so the gateway and order → user calls can find each other; SBA just reads the same registry.
