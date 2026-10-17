@@ -1,0 +1,7 @@
+# Production profile (SPRING_PROFILES_ACTIVE=prod): keep the registry during network partitions
+# instead of evicting everything at once — see README "Should self-preservation be on in prod?".
+eureka:
+  environment: ${EUREKA_ENVIRONMENT:prod}
+  server:
+    enable-self-preservation: true
+    renewal-percent-threshold: ${EUREKA_RENEWAL_THRESHOLD:0.85}   # lower (e.g. 0.5) for small clusters

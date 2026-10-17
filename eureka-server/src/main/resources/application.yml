@@ -16,6 +16,8 @@ eureka:
   environment: ${EUREKA_ENVIRONMENT:sit}   # dashboard header "Environment" (default: test)
   datacenter: ${EUREKA_DATACENTER:TX}      # dashboard header "Data center" (default: default)
   instance:
+    lease-renewal-interval-in-seconds: 10      # heartbeat every 10 s (default 30)
+    lease-expiration-duration-in-seconds: 30   # evicted 30 s after the last heartbeat (default 90)
     hostname: localhost
     metadata-map:
       # SBA discovers this node from the registry and polls /actuator with these credentials
@@ -31,7 +33,11 @@ eureka:
     service-url:
       defaultZone: http://${spring.security.user.name}:${spring.security.user.password}@${eureka.instance.hostname}:${server.port}/eureka/
   server:
-    enable-self-preservation: false   # demo/local: expire instances promptly instead of masking outages
+    # false locally so stopped instances vanish fast; true in prod (application-prod.yml / env var)
+    enable-self-preservation: ${EUREKA_SELF_PRESERVATION:false}
+    renewal-percent-threshold: ${EUREKA_RENEWAL_THRESHOLD:0.85}   # self-preservation trips below this share of expected renewals
+    expected-client-renewal-interval-seconds: 10                  # must match clients' lease-renewal-interval-in-seconds
+    eviction-interval-timer-in-ms: 30000                          # eviction sweep every 30 s (default 60 s)
 
 info:   # published by /actuator/info (needs management.info.env.enabled) → SBA Details → Info
   app:
