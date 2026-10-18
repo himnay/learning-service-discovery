@@ -17,9 +17,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+@RestController
 @Tag(name = "Users", description = "Read-only user directory (Postgres, seeded by Flyway)")
 @ApiResponse(responseCode = "401", description = "Missing or wrong HTTP Basic credentials", content = @Content)
-@RestController
 class UserController {
 
     private final UserService userService;
@@ -28,9 +28,9 @@ class UserController {
         this.userService = userService;
     }
 
+    @GetMapping("/api/users")
     @Operation(summary = "List all users")
     @ApiResponse(responseCode = "200", description = "All users")
-    @GetMapping("/api/users")
     List<User> getUsers() {
         return userService.findAll();
     }

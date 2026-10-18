@@ -1,6 +1,7 @@
 package com.learning.discovery.admin.config;
 
 import de.codecentric.boot.admin.server.config.AdminServerProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,6 +41,7 @@ import java.net.URI;
  */
 @Configuration
 @EnableWebFluxSecurity
+@EnableConfigurationProperties(SecurityProperties.class)
 class SecurityConfig {
 
     private final AdminServerProperties adminServer;
@@ -50,6 +52,7 @@ class SecurityConfig {
 
     @Bean
     SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http,
+                                                  SecurityProperties security,
                                                   ReactiveUserDetailsService userDetailsService,
                                                   ApplicationEventPublisher eventPublisher) {
         ReactiveAuthenticationManager authenticationManager =
@@ -62,7 +65,7 @@ class SecurityConfig {
                 .authorizeExchange(auth -> auth
                         .pathMatchers(adminServer.path("/assets/**"), adminServer.path("/variables.css"),
                                 adminServer.path("/login")).permitAll()
-                        .pathMatchers("/actuator/health/**", "/actuator/info", "/error").permitAll()
+                        .pathMatchers(security.publicPaths().toArray(String[]::new)).permitAll()
                         .anyExchange().authenticated())
                 .formLogin(form -> form
                         .loginPage(adminServer.path("/login"))

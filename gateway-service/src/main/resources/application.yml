@@ -68,6 +68,18 @@ springdoc:
         url: /api-docs/product-service
     urls-primary-name: user-service
 
+app:
+  security:
+    public-paths: # reachable without auth; everything else needs Basic/form login
+      - "/actuator/health/**"
+      - "/actuator/info"
+      - "/swagger-ui.html"
+      - "/swagger-ui/**"
+      - "/webjars/swagger-ui/**"
+      - "/v3/api-docs/**"
+      - "/api-docs/**"   # service specs, routed to each service's public /v3/api-docs
+      - "/error"
+
 eureka:
   client:
     service-url:

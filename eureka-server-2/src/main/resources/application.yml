@@ -16,6 +16,14 @@ spring:
   quartz:
     job-store-type: memory
 
+app:
+  security:
+    public-paths: # reachable without auth; everything else needs Basic/form login
+      - "/actuator/health/**"
+      - "/actuator/health"
+      - "/actuator/info"
+      - "/error"
+
 eureka:
   environment: ${EUREKA_ENVIRONMENT:SIT}   # dashboard header "Environment" (default: test)
   datacenter: ${EUREKA_DATACENTER:TX}      # dashboard header "Data center" (default: default)

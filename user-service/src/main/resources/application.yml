@@ -20,6 +20,16 @@ spring:
   quartz:
     job-store-type: memory
 
+app:
+  security:
+    public-paths: # reachable without auth; everything else needs Basic/form login
+      - "/actuator/health/**"
+      - "/actuator/info"
+      - "/swagger-ui.html"
+      - "/swagger-ui/**"
+      - "/v3/api-docs/**"
+      - "/error"
+
 eureka:
   client:
     service-url:

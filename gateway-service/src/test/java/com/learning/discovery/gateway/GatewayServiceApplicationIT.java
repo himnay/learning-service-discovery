@@ -10,9 +10,9 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-@SpringBootTest(webEnvironment = RANDOM_PORT)
-@AutoConfigureWebTestClient
 @ActiveProfiles("test")
+@AutoConfigureWebTestClient
+@SpringBootTest(webEnvironment = RANDOM_PORT)
 class GatewayServiceApplicationIT {
 
     @Autowired

@@ -17,9 +17,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+@RestController
 @Tag(name = "Products", description = "Read-only product catalogue (Postgres, seeded by Flyway)")
 @ApiResponse(responseCode = "401", description = "Missing or wrong HTTP Basic credentials", content = @Content)
-@RestController
 class ProductController {
 
     private final ProductService productService;
@@ -28,9 +28,9 @@ class ProductController {
         this.productService = productService;
     }
 
+    @GetMapping("/api/products")
     @Operation(summary = "List all products")
     @ApiResponse(responseCode = "200", description = "All products")
-    @GetMapping("/api/products")
     List<Product> getProducts() {
         return productService.findAll();
     }

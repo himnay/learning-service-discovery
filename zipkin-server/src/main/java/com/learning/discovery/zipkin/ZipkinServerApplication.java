@@ -12,8 +12,8 @@ import zipkin2.server.internal.banner.ZipkinBanner;
 // @EnableZipkinServer imports instead of Boot auto-configuration (hence enableautoconfiguration=false)
 // and reads zipkin-server*.yml (spring.config.name). This module's zipkin-server.yml picks the profiles.
 // The annotation lives in an internal package: Zipkin supports only its own server, not custom ones.
-@SpringBootConfiguration
 @EnableZipkinServer
+@SpringBootConfiguration
 public class ZipkinServerApplication {
 
     // public: Spring Boot 3.5's launcher looks up a public static main

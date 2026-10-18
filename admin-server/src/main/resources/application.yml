@@ -19,6 +19,14 @@ spring:
         default-user-name: ${spring.security.user.name}
         default-password: ${spring.security.user.password}
 
+app:
+  security:
+    # SBA assets and /login stay in SecurityConfig: they depend on the SBA context path
+    public-paths: # reachable without auth; everything else needs Basic/form login
+      - "/actuator/health/**"
+      - "/actuator/info"
+      - "/error"
+
 eureka:
   client:
     service-url:

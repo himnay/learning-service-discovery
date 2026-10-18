@@ -19,9 +19,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
-@Tag(name = "Orders", description = "Read-only orders (Postgres + Caffeine cache), optionally joined with user-service")
-@ApiResponse(responseCode = "401", description = "Missing or wrong HTTP Basic credentials", content = @Content)
 @RestController
+@ApiResponse(responseCode = "401", description = "Missing or wrong HTTP Basic credentials", content = @Content)
+@Tag(name = "Orders", description = "Read-only orders (Postgres + Caffeine cache), optionally joined with user-service")
 class OrderController {
 
     private final OrderService orderService;
@@ -32,9 +32,9 @@ class OrderController {
         this.userClient = userClient;
     }
 
+    @GetMapping("/api/orders")
     @Operation(summary = "List all orders")
     @ApiResponse(responseCode = "200", description = "All orders")
-    @GetMapping("/api/orders")
     List<Order> getOrders() {
         return orderService.findAll();
     }

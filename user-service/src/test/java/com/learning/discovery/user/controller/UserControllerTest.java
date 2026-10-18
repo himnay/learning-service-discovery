@@ -22,10 +22,10 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(UserController.class)
-@Import(SecurityConfig.class)
-@ActiveProfiles("test")
 @WithMockUser
+@ActiveProfiles("test")
+@Import(SecurityConfig.class)
+@WebMvcTest(UserController.class)
 class UserControllerTest {
 
     @Autowired

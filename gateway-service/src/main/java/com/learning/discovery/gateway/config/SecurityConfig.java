@@ -1,5 +1,6 @@
 package com.learning.discovery.gateway.config;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,18 +22,17 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
  */
 @Configuration
 @EnableWebFluxSecurity
+@EnableConfigurationProperties(SecurityProperties.class)
 class SecurityConfig {
 
     @Bean
     SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http,
+                                                  SecurityProperties security,
                                                   ReactiveUserDetailsService userDetailsService,
                                                   ApplicationEventPublisher eventPublisher) {
         return http
                 .authorizeExchange(auth -> auth
-                        .pathMatchers("/actuator/health/**", "/actuator/info",
-                                "/swagger-ui.html", "/swagger-ui/**", "/webjars/swagger-ui/**", "/v3/api-docs/**",
-                                "/api-docs/**",   // service specs, routed to each service's public /v3/api-docs
-                                "/error").permitAll()
+                        .pathMatchers(security.publicPaths().toArray(String[]::new)).permitAll()
                         .anyExchange().authenticated())
                 .httpBasic(basic -> basic.authenticationManager(
                         auditing(new UserDetailsRepositoryReactiveAuthenticationManager(userDetailsService), eventPublisher)))
