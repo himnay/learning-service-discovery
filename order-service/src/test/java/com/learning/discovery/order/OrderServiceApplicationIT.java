@@ -87,7 +87,7 @@ class OrderServiceApplicationIT {
         var body = restTestClient.get().uri("/actuator").accept(MediaType.APPLICATION_JSON).exchange()
                 .expectStatus().is2xxSuccessful()
                 .expectBody();
-        for (String link : new String[] {"httpexchanges", "auditevents", "sbom", "quartz", "jolokia", "sessions"}) {
+        for (String link : new String[]{"httpexchanges", "auditevents", "sbom", "quartz", "jolokia", "sessions"}) {
             body.jsonPath("$._links." + link).exists();
         }
     }

@@ -4,7 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/** Demo Quartz job, visible (and triggerable) in Spring Boot Admin under Quartz. */
+/**
+ * Demo Quartz job, visible (and triggerable) in Spring Boot Admin under Quartz.
+ */
 @Slf4j
 class HeartbeatJob extends QuartzJobBean {
 

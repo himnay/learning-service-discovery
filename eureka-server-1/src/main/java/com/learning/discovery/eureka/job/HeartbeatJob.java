@@ -6,7 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/** Demo Quartz job so /actuator/quartz (SBA "Quartz" view) has something to show. */
+/**
+ * Demo Quartz job so /actuator/quartz (SBA "Quartz" view) has something to show.
+ */
 public class HeartbeatJob extends QuartzJobBean {
 
     private static final Logger log = LoggerFactory.getLogger(HeartbeatJob.class);

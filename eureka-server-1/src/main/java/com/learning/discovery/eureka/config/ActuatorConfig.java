@@ -7,7 +7,9 @@ import org.springframework.boot.actuate.web.exchanges.InMemoryHttpExchangeReposi
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** Repositories that switch on /actuator/auditevents and /actuator/httpexchanges (SBA views). */
+/**
+ * Repositories that switch on /actuator/auditevents and /actuator/httpexchanges (SBA views).
+ */
 @Configuration(proxyBeanMethods = false)
 class ActuatorConfig {
 

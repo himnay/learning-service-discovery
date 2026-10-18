@@ -69,7 +69,7 @@ class EurekaServerApplicationTests {
     void sbaEndpointsAreExposedBehindAuth() {
         restTestClient.get().uri("/actuator/quartz").exchange().expectStatus().isUnauthorized();
         // "startup" is absent here: it needs BufferingApplicationStartup, which only main() installs
-        for (String endpoint : new String[] {"quartz", "httpexchanges", "auditevents", "jolokia", "sbom"}) {
+        for (String endpoint : new String[]{"quartz", "httpexchanges", "auditevents", "jolokia", "sbom"}) {
             restTestClient.get().uri("/actuator/" + endpoint).headers(h -> h.setBasicAuth("admin", "admin")).exchange()
                     .expectStatus().isOk();
         }

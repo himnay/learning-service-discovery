@@ -6,7 +6,7 @@ spring:
   application:
     name: admin-server
   security:
-    user:                                   # actuator Basic auth AND the SBA UI login form
+    user: # actuator Basic auth AND the SBA UI login form
       name: ${ACTUATOR_USER:admin}
       password: ${ACTUATOR_PASSWORD:admin}
       roles: ACTUATOR
@@ -14,7 +14,7 @@ spring:
     admin:
       ui:
         remember-me-enabled: false          # reactive Spring Security has no rememberMe(); hide the checkbox
-      instance-auth:                        # Basic auth SBA sends when polling each instance's actuator:
+      instance-auth: # Basic auth SBA sends when polling each instance's actuator:
         enabled: true                       # metadata user.name/user.password wins, these are the fallback
         default-user-name: ${spring.security.user.name}
         default-password: ${spring.security.user.password}
@@ -27,13 +27,13 @@ eureka:
     lease-renewal-interval-in-seconds: 10      # heartbeat every 10 s (default 30)
     lease-expiration-duration-in-seconds: 30   # evicted 30 s after the last heartbeat (default 90)
     prefer-ip-address: true
-    metadata-map:                           # read by SBA's BasicAuthHttpHeaderProvider (SBA discovers itself too)
+    metadata-map: # read by SBA's BasicAuthHttpHeaderProvider (SBA discovers itself too)
       user.name: ${spring.security.user.name}
       user.password: ${spring.security.user.password}
       tags.environment: ${APP_ENV:local}   # SBA shows tags.* as badges in the application list
       tags.tier: infra
 
-info:   # published by /actuator/info (needs management.info.env.enabled) → SBA Details → Info
+info: # published by /actuator/info (needs management.info.env.enabled) → SBA Details → Info
   app:
     name: ${spring.application.name}
     description: Spring Boot Admin dashboard (discovers instances via Eureka)
@@ -45,7 +45,7 @@ logging:
     name: logs/${spring.application.name}.log   # enables /actuator/logfile (SBA Logfile view)
 
 management:
-  info:   # extra contributors shown in SBA Details → Info
+  info: # extra contributors shown in SBA Details → Info
     env:
       enabled: true       # info.* properties above
     java:

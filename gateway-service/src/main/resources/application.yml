@@ -82,7 +82,7 @@ eureka:
       tags.environment: ${APP_ENV:local}   # SBA shows tags.* as badges in the application list
       tags.tier: edge
 
-info:   # published by /actuator/info (needs management.info.env.enabled) → SBA Details → Info
+info: # published by /actuator/info (needs management.info.env.enabled) → SBA Details → Info
   app:
     name: ${spring.application.name}
     description: API gateway routing /api/** to backend services via Eureka
@@ -107,7 +107,7 @@ management:
     metrics:
       export:
         enabled: false    # the starter also brings micrometer-registry-otlp; only traces are exported
-  info:   # extra contributors shown in SBA Details → Info
+  info: # extra contributors shown in SBA Details → Info
     env:
       enabled: true       # info.* properties above
     java:

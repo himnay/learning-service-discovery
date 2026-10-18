@@ -10,12 +10,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 class ActuatorConfig {
 
-    @Bean   // backs /actuator/auditevents (login success/failure events)
+    @Bean
+        // backs /actuator/auditevents (login success/failure events)
     AuditEventRepository auditEventRepository() {
         return new InMemoryAuditEventRepository();
     }
 
-    @Bean   // backs /actuator/httpexchanges
+    @Bean
+        // backs /actuator/httpexchanges
     HttpExchangeRepository httpExchangeRepository() {
         return new InMemoryHttpExchangeRepository();
     }

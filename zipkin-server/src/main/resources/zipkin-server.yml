@@ -1,0 +1,7 @@
+# Shadows zipkin-server.yml inside the zipkin-server jar (this module's classes come first on the classpath).
+# Same content as Zipkin's, plus two profiles. Later profiles override earlier ones:
+#   shared   -> zipkin-server-shared.yml (zipkin-server jar): every setting and its env var (QUERY_PORT, ...)
+#   otel     -> zipkin-server-otel.yml (zipkin-module-otel): OTLP/HTTP receiver at /v1/traces
+#   learning -> zipkin-server-learning.yml (this module): Eureka registration http://localhost:9411/zipkin/
+spring.profiles.include: shared, otel, learning
+armeria.enableMetrics: false

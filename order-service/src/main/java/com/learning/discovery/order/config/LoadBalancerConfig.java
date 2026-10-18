@@ -36,7 +36,9 @@ class LoadBalancerConfig {
                 .observationRegistry(observationRegistry);
     }
 
-    /** Bounded connect/read timeouts — the JDK client's default read timeout is infinite, so a hung upstream would pin the calling thread. */
+    /**
+     * Bounded connect/read timeouts — the JDK client's default read timeout is infinite, so a hung upstream would pin the calling thread.
+     */
     private static JdkClientHttpRequestFactory boundedTimeouts() {
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(
                 HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build());

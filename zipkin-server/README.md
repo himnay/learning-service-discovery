@@ -8,11 +8,11 @@ can export straight to it. No Docker. See the root [../README.md](../README.md) 
 
 ```mermaid
 flowchart LR
-    GW["gateway-service"] -- "OTLP/HTTP" --> ZIP
-    ORD["order-service"] -- "OTLP/HTTP" --> ZIP
-    USR["user-service"] -- "OTLP/HTTP" --> ZIP
-    PRD["product-service"] -- "OTLP/HTTP" --> ZIP
-    ZIP["zipkin-server :9411<br/>/v1/traces (OTLP) · /api/v2/** · UI /zipkin<br/>in-memory storage"] -- "register" --> EUR["eureka-server :8761"]
+    GW["gateway-service"] -- " OTLP/HTTP " --> ZIP
+    ORD["order-service"] -- " OTLP/HTTP " --> ZIP
+    USR["user-service"] -- " OTLP/HTTP " --> ZIP
+    PRD["product-service"] -- " OTLP/HTTP " --> ZIP
+    ZIP["zipkin-server :9411<br/>/v1/traces (OTLP) · /api/v2/** · UI /zipkin<br/>in-memory storage"] -- " register " --> EUR["eureka-server :8761"]
 ```
 
 - ***Services speak OpenTelemetry*** — `gateway-service`, `user-service`, `order-service` and `product-service`
@@ -28,17 +28,18 @@ flowchart LR
 - ***Sampling 100 %*** — `management.tracing.sampling.probability: 1.0` (Boot's default is 0.1).
 - ***Noise filtered*** — each service's `TracingConfig` drops `/actuator/**` (Spring Boot Admin polling),
   `/eureka/**` client calls (heartbeats) and Spring Security's per-filter spans.
-- ***Log correlation*** — Boot adds `[traceId-spanId]` to the services' log lines; grep a trace id from Zipkin in `logs/*.log`.
+- ***Log correlation*** — Boot adds `[traceId-spanId]` to the services' log lines; grep a trace id from Zipkin in
+  `logs/*.log`.
 - ***Tests*** — the services set `management.tracing.export.enabled: false` in `application-test.yml`.
 
 ## <span style="color:hsl(288,80%,58%)">Why this module has no parent and runs Boot 3.5</span>
 
-| Fact | Consequence |
-|---|---|
-| `@EnableZipkinServer` from `io.zipkin.java:zipkin-server` was last released as 2.12.9 (2019, Boot 2.1) | Not usable on Boot 4 / Java 27 |
-| Current `io.zipkin:zipkin-server` 3.6.1 is built on ***Spring Boot 3.5.12*** + Armeria; it still has `zipkin2.server.internal.EnableZipkinServer` (internal package: Zipkin supports only its own server) | This module uses that annotation and copies `zipkin.server.ZipkinServer`'s bootstrap |
-| On Boot 4.1 it fails at startup: `ClassNotFoundException: org.springframework.boot.web.server.Compression` (moved by Boot 4's modularization) | No `<parent>`: the repo's chain (super-pom → Boot 4.1) and `learning-bom` (imports `spring-boot-dependencies` 4.1) would override Zipkin's Boot 3.5 dependencies |
-| No Zipkin server BOM/starter exists (only client BOMs: `brave-bom`, `zipkin-reporter-bom`) | [pom.xml](pom.xml) lists 3 artifacts: `zipkin-server`, `zipkin-lens` (UI), `zipkin-module-otel`; the rest is transitive |
+| Fact                                                                                                                                                                                                      | Consequence                                                                                                                                                      |
+|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `@EnableZipkinServer` from `io.zipkin.java:zipkin-server` was last released as 2.12.9 (2019, Boot 2.1)                                                                                                    | Not usable on Boot 4 / Java 27                                                                                                                                   |
+| Current `io.zipkin:zipkin-server` 3.6.1 is built on ***Spring Boot 3.5.12*** + Armeria; it still has `zipkin2.server.internal.EnableZipkinServer` (internal package: Zipkin supports only its own server) | This module uses that annotation and copies `zipkin.server.ZipkinServer`'s bootstrap                                                                             |
+| On Boot 4.1 it fails at startup: `ClassNotFoundException: org.springframework.boot.web.server.Compression` (moved by Boot 4's modularization)                                                             | No `<parent>`: the repo's chain (super-pom → Boot 4.1) and `learning-bom` (imports `spring-boot-dependencies` 4.1) would override Zipkin's Boot 3.5 dependencies |
+| No Zipkin server BOM/starter exists (only client BOMs: `brave-bom`, `zipkin-reporter-bom`)                                                                                                                | [pom.xml](pom.xml) lists 3 artifacts: `zipkin-server`, `zipkin-lens` (UI), `zipkin-module-otel`; the rest is transitive                                          |
 
 Compiled for ***Java 27*** (`maven.compiler.release`), runs on the same JDK as the other modules. Still listed
 in the root `<modules>`, so `mvn verify` builds and tests it.
@@ -47,12 +48,12 @@ in the root `<modules>`, so `mvn verify` builds and tests it.
 
 Zipkin disables Boot auto-configuration and reads `zipkin-server*.yml` (`spring.config.name=zipkin-server`):
 
-| File | From | Content |
-|---|---|---|
-| [zipkin-server.yml](src/main/resources/zipkin-server.yml) | this module, ***shadows*** the one in the zipkin-server jar | `spring.profiles.include: shared, otel, learning` — later profiles override earlier ones |
-| `zipkin-server-shared.yml` | zipkin-server jar | every setting and its env var (`QUERY_PORT`, `STORAGE_TYPE`, `EUREKA_SERVICE_URL`, ...) |
-| `zipkin-server-otel.yml` | zipkin-module-otel jar | registers the OTLP/HTTP collector |
-| [zipkin-server-learning.yml](src/main/resources/zipkin-server-learning.yml) | this module | Eureka: `http://admin:admin@localhost:8761/eureka`, app name `zipkin-server` |
+| File                                                                        | From                                                        | Content                                                                                  |
+|-----------------------------------------------------------------------------|-------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| [zipkin-server.yml](src/main/resources/zipkin-server.yml)                   | this module, ***shadows*** the one in the zipkin-server jar | `spring.profiles.include: shared, otel, learning` — later profiles override earlier ones |
+| `zipkin-server-shared.yml`                                                  | zipkin-server jar                                           | every setting and its env var (`QUERY_PORT`, `STORAGE_TYPE`, `EUREKA_SERVICE_URL`, ...)  |
+| `zipkin-server-otel.yml`                                                    | zipkin-module-otel jar                                      | registers the OTLP/HTTP collector                                                        |
+| [zipkin-server-learning.yml](src/main/resources/zipkin-server-learning.yml) | this module                                                 | Eureka: `http://admin:admin@localhost:8761/eureka`, app name `zipkin-server`             |
 
 ## <span style="color:hsl(256,80%,58%)">Run</span>
 
@@ -79,10 +80,10 @@ and reads it back from `/api/v2/trace/{id}` in Zipkin format; also checks `/heal
 
 ## <span style="color:hsl(220,80%,62%)">Gotchas</span>
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `Failed to export spans ... Connection refused` in service logs | zipkin-server not running | Start it; the services keep working without it |
-| Zipkin empty right after a request | Boot batches spans (5 s schedule delay) | Wait a few seconds, re-run the query |
-| Order and user spans in separate traces | A `RestClient`/`WebClient` built without an `ObservationRegistry` sends no `traceparent` | Use Boot's builder, or set `.observationRegistry(..)` like `order-service` |
-| `Failed to register ... to Eureka` | eureka-server down | Harmless; set `DISCOVERY_EUREKA_ENABLED=false` to stop trying |
-| Traces gone after restart | in-memory storage | Expected for the demo; `STORAGE_TYPE=elasticsearch`/`cassandra3`/`mysql` need the optional storage jars |
+| Symptom                                                         | Cause                                                                                    | Fix                                                                                                     |
+|-----------------------------------------------------------------|------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
+| `Failed to export spans ... Connection refused` in service logs | zipkin-server not running                                                                | Start it; the services keep working without it                                                          |
+| Zipkin empty right after a request                              | Boot batches spans (5 s schedule delay)                                                  | Wait a few seconds, re-run the query                                                                    |
+| Order and user spans in separate traces                         | A `RestClient`/`WebClient` built without an `ObservationRegistry` sends no `traceparent` | Use Boot's builder, or set `.observationRegistry(..)` like `order-service`                              |
+| `Failed to register ... to Eureka`                              | eureka-server down                                                                       | Harmless; set `DISCOVERY_EUREKA_ENABLED=false` to stop trying                                           |
+| Traces gone after restart                                       | in-memory storage                                                                        | Expected for the demo; `STORAGE_TYPE=elasticsearch`/`cassandra3`/`mysql` need the optional storage jars |

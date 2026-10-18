@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- No parent on purpose. Zipkin 3.6 is built on Spring Boot 3.5 + Armeria and pins its own
+         versions; the repo's parent chain (super-pom -> spring-boot-starter-parent 4.1) would override
+         them with Boot 4 / Spring 7 and break it. Listed in the root <modules> so it still builds
+         with the reactor. -->
+    <groupId>com.learning</groupId>
+    <artifactId>zipkin-server</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>zipkin-server</name>
+    <description>Zipkin server (Spring Boot 3.5, @EnableZipkinServer) with an OTLP/HTTP receiver</description>
+
+    <properties>
+        <java.version>27</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <zipkin.version>3.6.1</zipkin.version>
+        <zipkin-otel.version>0.3.0</zipkin-otel.version>
+        <!-- must match the Spring Boot version zipkin-server is built against -->
+        <spring-boot.version>3.5.12</spring-boot.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <!-- Server, API (/api/v2/**), in-memory storage, Zipkin-format collector (/api/v2/spans) -->
+            <groupId>io.zipkin</groupId>
+            <artifactId>zipkin-server</artifactId>
+            <version>${zipkin.version}</version>
+        </dependency>
+        <dependency>
+            <!-- The web UI ("Lens") served at / -->
+            <groupId>io.zipkin</groupId>
+            <artifactId>zipkin-lens</artifactId>
+            <version>${zipkin.version}</version>
+        </dependency>
+        <dependency>
+            <!-- OTLP/HTTP receiver at /v1/traces: the services export with spring-boot-starter-opentelemetry -->
+            <groupId>io.zipkin.contrib.otel</groupId>
+            <artifactId>zipkin-module-otel</artifactId>
+            <version>${zipkin-otel.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <!-- zipkin-server logs through log4j2 (spring-boot-starter-log4j2) -->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.3</version>
+            </plugin>
+            <plugin>
+                <!-- Runs *IT like the other modules (they get failsafe from super-pom) -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.5.3</version>
+                <configuration>
+                    <!-- test against target/classes, not the repackaged (BOOT-INF/) jar -->
+                    <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>com.learning.discovery.zipkin.ZipkinServerApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
