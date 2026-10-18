@@ -45,7 +45,7 @@ AP/CAP, self-preservation and eviction timing, see the [root README](../README.m
 - ***Self-preservation: on*** — `enable-self-preservation: ${EUREKA_SELF_PRESERVATION:true}`, so the dashboard no longer
   shows `THE SELF PRESERVATION MODE IS TURNED OFF...` and a network blip can't mass-evict the registry. Threshold
   `EUREKA_RENEWAL_THRESHOLD` defaults to `0.5` locally (killing one or two services in a ~8-instance demo still evicts
-  them) and `0.85` under the `prod` profile ([application-prod.yml](src/main/resources/application-prod.yml)). Tradeoffs
+  them) and `0.85` under the `prod` profile (the `on-profile: prod` section of [application.yml](src/main/resources/application.yml)). Tradeoffs
   in the root [FAQ](../README.md#faq).
 - ***Faster leases (all modules)*** — clients heartbeat every 10 s and expire 30 s after the last one
   (`lease-renewal-interval-in-seconds` / `lease-expiration-duration-in-seconds`, defaults 30 / 90); the server matches
