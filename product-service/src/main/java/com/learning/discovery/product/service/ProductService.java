@@ -2,19 +2,17 @@ package com.learning.discovery.product.service;
 
 import com.learning.discovery.product.model.Product;
 import com.learning.discovery.product.repository.ProductRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository productRepository;
-
-    ProductService(ProductRepository productRepository) {
-        this.productRepository = productRepository;
-    }
 
     public List<Product> findAll() {
         return productRepository.findAll();

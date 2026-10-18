@@ -1,5 +1,6 @@
 package com.learning.discovery.order.client;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.cloud.client.ServiceInstance;
@@ -15,15 +16,12 @@ import java.util.List;
  * kept out of the readiness group for the same reason).
  */
 @Component
+@RequiredArgsConstructor
 class UserServiceHealthIndicator implements HealthIndicator {
 
     private static final String USER_SERVICE = "user-service";
 
     private final DiscoveryClient discoveryClient;
-
-    UserServiceHealthIndicator(DiscoveryClient discoveryClient) {
-        this.discoveryClient = discoveryClient;
-    }
 
     @Override
     public Health health() {

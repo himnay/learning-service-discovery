@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,15 +19,12 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 @Tag(name = "Products", description = "Read-only product catalogue (Postgres, seeded by Flyway)")
 @ApiResponse(responseCode = "401", description = "Missing or wrong HTTP Basic credentials", content = @Content)
 class ProductController {
 
     private final ProductService productService;
-
-    ProductController(ProductService productService) {
-        this.productService = productService;
-    }
 
     @GetMapping("/api/products")
     @Operation(summary = "List all products")

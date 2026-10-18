@@ -1,6 +1,7 @@
 package com.learning.discovery.admin.config;
 
 import de.codecentric.boot.admin.server.config.AdminServerProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -41,14 +42,11 @@ import java.net.URI;
  */
 @Configuration
 @EnableWebFluxSecurity
+@RequiredArgsConstructor
 @EnableConfigurationProperties(SecurityProperties.class)
 class SecurityConfig {
 
     private final AdminServerProperties adminServer;
-
-    SecurityConfig(AdminServerProperties adminServer) {
-        this.adminServer = adminServer;
-    }
 
     @Bean
     SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http,

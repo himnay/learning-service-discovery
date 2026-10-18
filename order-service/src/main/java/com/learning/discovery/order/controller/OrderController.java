@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,17 +21,13 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 @ApiResponse(responseCode = "401", description = "Missing or wrong HTTP Basic credentials", content = @Content)
 @Tag(name = "Orders", description = "Read-only orders (Postgres + Caffeine cache), optionally joined with user-service")
 class OrderController {
 
     private final OrderService orderService;
     private final UserClient userClient;
-
-    OrderController(OrderService orderService, UserClient userClient) {
-        this.orderService = orderService;
-        this.userClient = userClient;
-    }
 
     @GetMapping("/api/orders")
     @Operation(summary = "List all orders")
