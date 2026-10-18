@@ -11,7 +11,7 @@
 7. ⚠️ [Gotchas](#gotchas)
 8. ❓ [Q&A](#qa)
 
-API gateway module of [learning-service-discovery](../README.md). The project-wide
+API gateway module of [learning-spring-cloud](../README.md). The project-wide
 picture (all 6 modules, Eureka registry flow, Spring Boot Admin) lives in the root
 README; this file covers only what `gateway-service` itself implements.
 
@@ -67,7 +67,7 @@ README; this file covers only what `gateway-service` itself implements.
   (order: [root README §4](../README.md#run-order)).
 
 ```bash
-cd learning-service-discovery
+cd learning-spring-cloud
 mvn -pl gateway-service spring-boot:run
 # or with custom credentials
 ACTUATOR_USER=ops ACTUATOR_PASSWORD=s3cret mvn -pl gateway-service spring-boot:run

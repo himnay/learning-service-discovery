@@ -8,7 +8,7 @@
       "_id": "wrk_gateway_service_discovery",
       "_type": "workspace",
       "parentId": null,
-      "name": "learning-service-discovery — Gateway",
+      "name": "learning-spring-cloud — Gateway",
       "description": "REST APIs reachable through gateway-service (localhost:8080), routed via Eureka lb:// to user-service, order-service, product-service.",
       "scope": "collection"
     },

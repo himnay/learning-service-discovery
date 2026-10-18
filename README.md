@@ -1,4 +1,4 @@
-# <span style="color:hsl(13,80%,58%)">learning-service-discovery</span>
+# <span style="color:hsl(13,80%,58%)">learning-spring-cloud</span>
 
 ## <span style="color:hsl(151,80%,58%)">Table of contents</span>
 
@@ -238,7 +238,7 @@ port in each `user-service` log line alternate.
 
 ```
 super-pom (com.org.llm:super-pom:1.2.1)   ← corporate parent (Boot 4.1.1, Java 27), imports learning-bom 3.1.0
-  └── learning-service-discovery (com.learning:learning-service-discovery)  ← this repo's root pom, packaging=pom
+  └── learning-spring-cloud (com.learning:learning-spring-cloud)  ← this repo's root pom, packaging=pom
         ├── eureka-server
         ├── admin-server
         ├── user-service
@@ -269,7 +269,7 @@ Eureka server must be up first so the other clients have somewhere to register.
 The tracing stack is optional and can start at any time.
 
 ```bash
-cd learning-service-discovery
+cd learning-spring-cloud
 mvn -pl zipkin-server spring-boot:run &      # optional: tracing UI at http://localhost:9411
 mvn -pl eureka-server-1 spring-boot:run &
 mvn -pl eureka-server-2 spring-boot:run &

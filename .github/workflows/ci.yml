@@ -20,7 +20,7 @@ jobs:
           path: super-pom
       - uses: actions/checkout@v4
         with:
-          path: learning-service-discovery
+          path: learning-spring-cloud
       - uses: actions/setup-java@v4
         with:
           java-version: '27'
@@ -34,4 +34,4 @@ jobs:
         working-directory: super-pom
       - name: Build and test
         run: mvn -B verify
-        working-directory: learning-service-discovery
+        working-directory: learning-spring-cloud

@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>com.learning</groupId>
-    <artifactId>learning-service-discovery</artifactId>
+    <artifactId>learning-spring-cloud</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>learning-service-discovery</name>
+    <name>learning-spring-cloud</name>
     <description>Eureka service discovery demo: 3 microservices registering to a Eureka registry</description>
 
     <modules>

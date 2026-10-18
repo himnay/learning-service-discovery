@@ -11,7 +11,7 @@
 7. ⚠️ [Gotchas](#gotchas)
 8. ❓ [Q&A](#qa)
 
-Peer 1 of the two-node service registry for the [learning-service-discovery](../README.md) demo; [
+Peer 1 of the two-node service registry for the [learning-spring-cloud](../README.md) demo; [
 `eureka-server-2`](../eureka-server-2/README.md) is the same code on port 8762 (this README covers both). Every other
 module (`user-service`, `order-service`, `product-service`, `gateway-service`, `admin-server`) registers here. For how
 the gateway resolves `lb://` IDs against this registry, how Spring Boot Admin discovers instances, and the FAQ on

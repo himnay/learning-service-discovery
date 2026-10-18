@@ -12,7 +12,7 @@
 8. ⚠️ [Gotchas](#gotchas)
 9. ❓ [Q&A](#qa)
 
-Part of the [learning-service-discovery](../README.md) demo: a small Spring MVC
+Part of the [learning-spring-cloud](../README.md) demo: a small Spring MVC
 service that serves a fixed product catalogue, registers with Eureka, sits behind
 `gateway-service`, and exposes enough actuator endpoints to light up almost
 every Spring Boot Admin (SBA) view. Shared setup that applies to every module (parent/BOM chain, run order, the full SBA
@@ -77,7 +77,7 @@ Seed data:
 - ***Start `eureka-server` first*** (see [root run order](../README.md#run-order)), then:
 
 ```bash
-cd learning-service-discovery
+cd learning-spring-cloud
 mvn -pl product-service spring-boot:run
 ```
 

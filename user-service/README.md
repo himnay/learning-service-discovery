@@ -71,7 +71,7 @@ whole picture (Eureka, gateway, Spring Boot Admin, run order).
 - ***Start `eureka-server` first*** (root [run order](../README.md#run-order)), then:
 
 ```bash
-cd learning-service-discovery
+cd learning-spring-cloud
 mvn -pl user-service spring-boot:run
 ```
 
