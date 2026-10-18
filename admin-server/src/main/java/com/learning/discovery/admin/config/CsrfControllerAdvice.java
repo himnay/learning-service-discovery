@@ -16,6 +16,6 @@ class CsrfControllerAdvice {
 
     @ModelAttribute("_csrf")
     Mono<CsrfToken> csrfToken(ServerWebExchange exchange) {
-        return exchange.getAttributeOrDefault(CsrfToken.class.getName(), Mono.<CsrfToken>empty());
+        return exchange.getAttributeOrDefault(CsrfToken.class.getName(), Mono.empty());
     }
 }

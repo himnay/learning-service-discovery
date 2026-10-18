@@ -61,7 +61,9 @@ class SecurityConfig {
 
         return http
                 .authorizeExchange(auth -> auth
-                        .pathMatchers(adminServer.path("/assets/**"), adminServer.path("/variables.css"),
+                        .pathMatchers(
+                                adminServer.path("/assets/**"),
+                                adminServer.path("/variables.css"),
                                 adminServer.path("/login")).permitAll()
                         .pathMatchers(security.publicPaths().toArray(String[]::new)).permitAll()
                         .anyExchange().authenticated())

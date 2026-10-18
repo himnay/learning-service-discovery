@@ -11,13 +11,11 @@ import org.springframework.context.annotation.Configuration;
 class ActuatorConfig {
 
     @Bean
-        // backs /actuator/auditevents (SBA UI login success/failure, see SecurityConfig)
     AuditEventRepository auditEventRepository() {
         return new InMemoryAuditEventRepository();
     }
 
     @Bean
-        // backs /actuator/httpexchanges (recorded by HttpExchangesWebFilter on WebFlux)
     HttpExchangeRepository httpExchangeRepository() {
         return new InMemoryHttpExchangeRepository();
     }
