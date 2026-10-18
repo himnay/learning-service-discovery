@@ -693,7 +693,7 @@ one feeds.
 | `busrefresh`      | Broadcast refresh to all instances                          | Spring Cloud Bus            | —         | —     | —       | —    | —       | —     |
 | `busenv`          | Broadcast an env change to all instances                    | Spring Cloud Bus            | —         | —     | —       | —    | —       | —     |
 
-- ***Not exposed anywhere here*** — `prometheus` (user, product, order and gateway push metrics over OTLP instead),
+- ***Not exposed anywhere here*** — `prometheus` (metrics are read on demand through `metrics` / SBA; OTLP exports traces only),
   `conditions`, `liquibase`, `integrationgraph`, `pause`/`resume`, `features`, `serviceregistry` and the Bus endpoints;
   add the name to `exposure.include` to turn one on.
 - ***Module-specific endpoints*** — `caches`, `scheduledtasks`, `sessions`: only `order-service` has a cache, a
