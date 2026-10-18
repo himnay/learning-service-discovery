@@ -21,6 +21,7 @@
 8. 🗺️ [Where this fits: Spring Cloud/Netflix OSS vs Kubernetes](#where-this-fits)
 9. 🌐 [Virtual IPs (VIP)](#virtual-ips-vip)
 10. 🔐 [Security and Spring Boot Admin features](#security-and-sba-features)
+11. 📡 [Actuator endpoints](#actuator-endpoints)
 
 Eureka service discovery demo. 6 Maven modules: 1 Eureka registry + 3 REST
 microservices + 1 API gateway + 1 Spring Boot Admin dashboard, all registering
@@ -632,3 +633,70 @@ eureka:
 - ***Shutdown, restart, env POST and Jolokia mutate the running app*** — fine here behind Basic auth; never expose them
   on a public port.
 
+<a id="actuator-endpoints"></a>
+
+## <span style="color:hsl(170,80%,58%)">11. 📡 Actuator endpoints</span>
+
+Every endpoint Spring Boot Actuator (Boot 4.x, as of 2026) and Spring Cloud can expose, and which module exposes it over
+HTTP here (`management.endpoints.web.exposure.include` in each `application.yml`). ✅ = exposed, — = not exposed. All
+of them sit behind HTTP Basic except `health` and `info`; see [§10](#security-and-sba-features) for the SBA view each
+one feeds.
+
+- ***Boot's own default*** — over HTTP only `health` is exposed; every endpoint except `shutdown` is accessible once
+  exposed (`shutdown` needs `management.endpoint.shutdown.access: unrestricted`).
+- ***`eureka ×2`*** — `eureka-server-1` and `eureka-server-2` share the same list.
+- ***`zipkin-server`*** is not in the table: it runs Zipkin's own server (it registers in Eureka as `zipkin-server`
+  through `zipkin.discovery.eureka`), not Spring Boot Actuator.
+
+**Spring Boot Actuator:**
+
+| Endpoint           | What it shows / does                                                                   | Needs                                      | eureka ×2 | admin | gateway | user | product | order |
+|--------------------|----------------------------------------------------------------------------------------|--------------------------------------------|-----------|-------|---------|------|---------|-------|
+| `health`           | App health with details and groups (`liveness`, `readiness`)                           | —                                          | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `info`             | App info: `info.*`, build, git, java, os, process                                      | contributors via `management.info.*`       | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `metrics`          | Micrometer metrics; `/metrics/{name}` for one                                          | —                                          | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `prometheus`       | Metrics in Prometheus scrape format                                                    | `micrometer-registry-prometheus`           | —         | —     | —       | —    | —       | —     |
+| `env`              | Property sources and resolved values (masked by default); POST edits with Spring Cloud | —                                          | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `configprops`      | `@ConfigurationProperties` beans and values (masked by default)                        | —                                          | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `beans`            | All beans in the context                                                               | —                                          | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `conditions`       | Auto-configuration report: what matched or not, and why                                | —                                          | —         | —     | —       | —    | —       | —     |
+| `mappings`         | All request mappings / router functions                                                | —                                          | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `loggers`          | View and change log levels at runtime                                                  | —                                          | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `logfile`          | Log file contents (byte ranges)                                                        | `logging.file.name` / `path`               | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `threaddump`       | Thread dump                                                                            | —                                          | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `heapdump`         | Heap dump download (`.hprof`); contains secrets                                        | HotSpot JVM                                | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `scheduledtasks`   | `@Scheduled` tasks                                                                     | —                                          | —         | —     | —       | —    | —       | ✅     |
+| `caches`           | Cache managers and caches; evict                                                       | a `CacheManager`                           | —         | —     | —       | —    | —       | ✅     |
+| `httpexchanges`    | Recent HTTP requests and responses                                                     | `HttpExchangeRepository` bean              | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `auditevents`      | Security audit events (logins, failures)                                               | `AuditEventRepository` bean                | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `sessions`         | Spring Session sessions; list and delete                                               | Spring Session                             | —         | —     | —       | —    | —       | ✅     |
+| `startup`          | Startup steps and timings                                                              | `BufferingApplicationStartup`              | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `sbom`             | Software bill of materials                                                             | CycloneDX file in `META-INF/sbom`          | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `flyway`           | Applied Flyway migrations                                                              | Flyway                                     | —         | —     | —       | —    | —       | ✅     |
+| `liquibase`        | Applied Liquibase changesets                                                           | Liquibase                                  | —         | —     | —       | —    | —       | —     |
+| `quartz`           | Quartz jobs and triggers                                                               | Quartz                                     | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `integrationgraph` | Spring Integration component graph                                                     | Spring Integration                         | —         | —     | —       | —    | —       | —     |
+| `shutdown`         | Graceful shutdown (POST)                                                               | off until `access: unrestricted`           | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `jolokia`          | JMX over HTTP                                                                          | `jolokia-support-springboot`, servlet only | ✅         | —     | —       | ✅    | ✅       | ✅     |
+
+**Spring Cloud** (present when the dependency is on the classpath):
+
+| Endpoint          | What it shows / does                                        | Needs                       | eureka ×2 | admin | gateway | user | product | order |
+|-------------------|-------------------------------------------------------------|-----------------------------|-----------|-------|---------|------|---------|-------|
+| `refresh`         | Re-bind `@RefreshScope` / `@ConfigurationProperties` (POST) | Spring Cloud Context        | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `restart`         | Restart the context (POST)                                  | Spring Cloud Context        | ✅         | ✅     | ✅       | ✅    | ✅       | ✅     |
+| `pause`           | Stop the context lifecycle (POST)                           | Spring Cloud Context        | —         | —     | —       | —    | —       | —     |
+| `resume`          | Start it again (POST)                                       | Spring Cloud Context        | —         | —     | —       | —    | —       | —     |
+| `features`        | Spring Cloud features in use                                | Spring Cloud Commons        | —         | —     | —       | —    | —       | —     |
+| `serviceregistry` | Get/set this instance's registration status                 | a service registry (Eureka) | —         | —     | —       | —    | —       | —     |
+| `gateway`         | Routes, predicates, filters; refresh, add, delete routes    | Spring Cloud Gateway        | —         | —     | ✅       | —    | —       | —     |
+| `busrefresh`      | Broadcast refresh to all instances                          | Spring Cloud Bus            | —         | —     | —       | —    | —       | —     |
+| `busenv`          | Broadcast an env change to all instances                    | Spring Cloud Bus            | —         | —     | —       | —    | —       | —     |
+
+- ***Not exposed anywhere here*** — `prometheus` (user, product, order and gateway push metrics over OTLP instead),
+  `conditions`, `liquibase`, `integrationgraph`, `pause`/`resume`, `features`, `serviceregistry` and the Bus endpoints;
+  add the name to `exposure.include` to turn one on.
+- ***Module-specific endpoints*** — `caches`, `scheduledtasks`, `sessions`: only `order-service` has a cache, a
+  scheduler and Spring Session. `flyway`: user, product and order all migrate with Flyway, but only `order-service`
+  exposes the endpoint. `gateway`: only `gateway-service` runs Spring Cloud Gateway (SBA → Web →
+  Gateway). `jolokia`: servlet modules only (WebFlux `admin-server` and `gateway-service` can't run it).
