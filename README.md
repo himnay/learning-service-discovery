@@ -9,6 +9,15 @@
 5. ✅ [Verify](#verify)
 6. 🧪 [Tests](#tests)
 7. ❓ [FAQ](#faq)
+    - 7.1 [What happens if a service's port changes after a restart?](#faq-port-change)
+    - 7.2 [How does the gateway route calls when there are multiple instances of the same service (load balancing)?](#faq-load-balancing)
+    - 7.3 [Does every gateway call go through Eureka, or does the gateway cache service locations?](#faq-gateway-cache)
+    - 7.4 [Why does `gateway-service` need Spring Cloud LoadBalancer at all if it already round-robins between instances?](#faq-why-loadbalancer)
+    - 7.5 [`order-service` now calls `user-service` directly (`GET /api/orders/{id}/with-user`) — does that bypass Eureka, since it skips the gateway?](#faq-order-calls-user)
+    - 7.6 [Eureka is CAP-theorem AP (favors Availability + Partition tolerance over Consistency) — what does that actually mean here, and what's the failure mode?](#faq-eureka-ap)
+    - 7.7 [What does self-preservation protect against, and is turning it off ever wrong?](#faq-self-preservation)
+    - 7.8 [Two `user-service` instances register with the same `instanceId` (e.g. identical `hostname:port` — common in containers with the same internal hostname) — what happens?](#faq-duplicate-instance-id)
+    - 7.9 [What's the worst-case time between an instance actually going down and the gateway noticing and routing around it?](#faq-worst-case-detection)
 8. 🗺️ [Where this fits: Spring Cloud/Netflix OSS vs Kubernetes](#where-this-fits)
 9. 🌐 [Virtual IPs (VIP)](#virtual-ips-vip)
 10. 🔐 [Security and Spring Boot Admin features](#security-and-sba-features)
@@ -341,6 +350,8 @@ Run all tests: `mvn clean verify` (failsafe plugin from `super-pom` runs the
 
 ## <span style="color:hsl(308,80%,58%)">7. ❓ FAQ</span>
 
+<a id="faq-port-change"></a>
+
 **What happens if a service's port changes after a restart?**
 
 A different `server.port` means a different Eureka `instanceId` (default
@@ -357,6 +368,8 @@ Once the cache refreshes, routing works again with **zero gateway config
 change**, because routes point at a service ID (`lb://USER-SERVICE`), never
 a baked-in host:port.
 
+<a id="faq-load-balancing"></a>
+
 **How does the gateway route calls when there are multiple instances of the
 same service (load balancing)?**
 
@@ -372,6 +385,8 @@ instances before forwarding (`spring.cloud.loadbalancer.health-check.enabled`
 would add that if needed). See the diagram in
 [§2](#how-the-gateway-finds-services-via-eureka).
 
+<a id="faq-gateway-cache"></a>
+
 **Does every gateway call go through Eureka, or does the gateway cache
 service locations?**
 
@@ -385,6 +400,8 @@ gateway keeps routing correctly off its last-known cache until instances
 naturally age out — it doesn't fail calls just because the registry happens
 to be unreachable at that instant.
 
+<a id="faq-why-loadbalancer"></a>
+
 **Why does `gateway-service` need Spring Cloud LoadBalancer at all if it
 already round-robins between instances?**
 
@@ -396,6 +413,8 @@ only recognizes the `lb://` scheme and delegates instance selection to a
 [`ReactorServiceInstanceLoadBalancer`][ReactorServiceInstanceLoadBalancer] bean (default: `RoundRobinLoadBalancer`).
 The split exists because the same load-balancer library is reused by plain
 [`@LoadBalanced`][LoadBalanced] HTTP clients outside the gateway too — see the next question.
+
+<a id="faq-order-calls-user"></a>
 
 **`order-service` now calls `user-service` directly (`GET
 /api/orders/{id}/with-user`) — does that bypass Eureka, since it skips the
@@ -413,6 +432,8 @@ the call, not the one that receives it — `user-service` needed no changes.
 If `user-service` is unreachable, `UserClient.fetchUser` catches
 [`RestClientException`][RestClientException] and the endpoint still returns `200` with `user: null`
 rather than a `500`.
+
+<a id="faq-eureka-ap"></a>
 
 **Eureka is CAP-theorem AP (favors Availability + Partition tolerance over
 Consistency) — what does that actually mean here, and what's the failure
@@ -434,6 +455,8 @@ other moments later, and during a partition both keep serving their own,
 possibly diverging, view. That's the AP choice in action, and the reason
 clients list both URLs in `defaultZone`: one node down, they fail over.
 
+<a id="faq-self-preservation"></a>
+
 **What does self-preservation protect against, and is turning it off ever
 wrong?**
 
@@ -452,6 +475,8 @@ every healthy instance simultaneously, and every client (including the
 gateway) suddenly sees an empty registry for that service. Off is tolerable
 for single-host local dev; production Eureka deployments almost always leave it on.
 
+<a id="faq-duplicate-instance-id"></a>
+
 **Two `user-service` instances register with the same `instanceId` (e.g.
 identical `hostname:port` — common in containers with the same internal
 hostname) — what happens?**
@@ -467,6 +492,8 @@ zero traffic despite passing its own health checks. This repo avoids it via
 where every replica shares a hostname, set
 `eureka.instance.instance-id: ${spring.application.name}:${random.value}`
 explicitly to guarantee uniqueness.
+
+<a id="faq-worst-case-detection"></a>
 
 **What's the worst-case time between an instance actually going down and
 the gateway noticing and routing around it?**

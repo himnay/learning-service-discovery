@@ -5,7 +5,7 @@
 1. 🧩 [Overview](#overview)
 2. 🚀 [Run and log in](#run-and-login)
 3. 🔐 [Security in detail](#security)
-4. 🔑 [Alternative login options (as of 2026)](#login-options)
+4. 🔑 [Types of supported security](#login-options)
 5. 📡 [Actuator endpoints exposed](#actuator-endpoints)
 6. ⏱️ [Quartz demo job](#quartz)
 7. 📝 [Logging to file](#logging)
@@ -13,6 +13,12 @@
 9. 🧪 [Tests](#tests)
 10. 🛠️ [Gotchas and troubleshooting](#gotchas)
 11. ❓ [Q&A](#qa)
+    - 11.1 [Does Spring Boot Admin poll, or do the clients push?](#qa-sba-poll-or-push)
+    - 11.2 [If we don't use Eureka, do we have to list each client in SBA?](#qa-without-eureka)
+    - 11.3 [So without Eureka it's a push from the client?](#qa-push-without-eureka)
+    - 11.4 [Does Eureka save SBA from calling every instance, by replacing those calls with one call to Eureka?](#qa-eureka-saves-calls)
+    - 11.5 [Can we avoid `spring-boot-admin-starter-client` in every service and rely on Eureka alone?](#qa-eureka-only)
+    - 11.6 [What are the `AuditEventRepository` and `HttpExchangeRepository` beans in `ActuatorConfig` for?](#qa-actuator-repositories)
 
 Spring Boot Admin (SBA) dashboard for the Eureka demo. Back to the project
 overview: [../README.md](../README.md).
@@ -207,7 +213,7 @@ sequenceDiagram
 
 <a id="login-options"></a>
 
-## <span style="color:hsl(84,80%,58%)">4. 🔑 Alternative login options (as of 2026)</span>
+## <span style="color:hsl(84,80%,58%)">4. 🔑 Types of supported security</span>
 
 How *people* log into the dashboard. All of them must be the reactive variant,
 because this is WebFlux.
@@ -277,6 +283,10 @@ instance, just as it does for the other services. All of them except
   isn't available for admin-server. The servlet-based services can still offer it.
 - ***`heapdump` is sensitive***: a heap dump contains secrets in memory (including
   the passwords above). Keep the port private, or drop it from the exposure list.
+- ***`auditevents` and `httpexchanges` need a repository bean.*** Boot doesn't create one,
+  so without the two beans in
+  [ActuatorConfig.java](src/main/java/com/learning/discovery/admin/config/ActuatorConfig.java)
+  both endpoints and their SBA views disappear. Both stores are in memory: see [Q6](#qa-actuator-repositories).
 
 ### Health probes, info and tags
 
@@ -443,6 +453,8 @@ mvn -pl admin-server verify -Dit.test=AdminServerApplicationIT
 
 ## <span style="color:hsl(0,80%,58%)">11. ❓ Q&A</span>
 
+<a id="qa-sba-poll-or-push"></a>
+
 **Q1. Does Spring Boot Admin poll, or do the clients push?**
 
 - ***SBA polls.*** In this repo nothing is pushed to SBA at all.
@@ -472,6 +484,8 @@ mvn -pl admin-server verify -Dit.test=AdminServerApplicationIT
 - ***Consequences*** — services don't depend on SBA (SBA down = no impact on them); SBA must reach every instance (right
   IP via `prefer-ip-address`, credentials from Eureka metadata), or it shows OFFLINE; load is one `/health` call per
   instance every 10 s.
+
+<a id="qa-without-eureka"></a>
 
 **Q2. If we don't use Eureka, do we have to list each client in SBA?**
 
@@ -527,6 +541,8 @@ spring:
 - ***Static list*** — no change in the services, but scaling or a port change means editing SBA's config and restarting
   it.
 
+<a id="qa-push-without-eureka"></a>
+
 **Q3. So without Eureka it's a push from the client?**
 
 - ***Only the registration is pushed, and only with the SBA client. Monitoring is still pulled.***
@@ -545,6 +561,8 @@ client ◀── GET /actuator/health, /info, /metrics … ───────
 - ***The push carries only name, URLs and metadata*** (e.g. credentials) — no health or metrics data.
 - ***SBA must still reach each client's `/actuator`*** — the network/firewall has to allow SBA → app in both setups.
 - ***Static list, Kubernetes and Consul involve no push at all.***
+
+<a id="qa-eureka-saves-calls"></a>
 
 **Q4. Does Eureka save SBA from calling every instance, by replacing those calls with one call to Eureka?**
 
@@ -568,6 +586,8 @@ client ◀── GET /actuator/health, /info, /metrics … ───────
   `info-interval: 5m`. It only matters with hundreds of instances: the default is one light GET per instance every 10 s.
 - ***Heartbeats aren't extra cost for SBA*** — services send them anyway so the gateway and order → user calls can find
   each other; SBA just reads the same registry.
+
+<a id="qa-eureka-only"></a>
 
 **Q5. Can we avoid `spring-boot-admin-starter-client` in every service and rely on Eureka alone?**
 
@@ -612,3 +632,21 @@ SBA client vs Eureka only:
   matter.
 - ***Verdict*** — Eureka only is the cleaner choice when Eureka already runs; keep the SBA client for apps outside the
   registry.
+
+<a id="qa-actuator-repositories"></a>
+
+**Q6. What are the `AuditEventRepository` and `HttpExchangeRepository` beans in `ActuatorConfig` for?**
+
+- ***They switch on two actuator endpoints.*** Since Boot 2.2 neither repository is auto-configured; the endpoint exists
+  only when a bean of that type is present.
+
+| Bean                                                        | Endpoint                  | SBA view       | What is stored                                                                                  | Kept               |
+|-------------------------------------------------------------|---------------------------|----------------|-------------------------------------------------------------------------------------------------|--------------------|
+| `AuditEventRepository` (`InMemoryAuditEventRepository`)     | `/actuator/auditevents`   | Audit Log      | `AUTHENTICATION_SUCCESS` / `AUTHENTICATION_FAILURE` for UI and Basic logins ([§3.4](#security)) | last 1000 events   |
+| `HttpExchangeRepository` (`InMemoryHttpExchangeRepository`) | `/actuator/httpexchanges` | HTTP Exchanges | method, URI, status, time taken, headers, recorded by `HttpExchangesWebFilter` (WebFlux)        | last 100 exchanges |
+
+- ***Audit events need two parts*** — the repository stores them, but on WebFlux nothing publishes login events until
+  `SecurityConfig.auditing(...)` wraps the authentication manager.
+- ***In-memory limits*** — lost on restart, one store per instance, fixed size.
+- ***Production*** — persist audit events (database, log shipping or SIEM) with your own `AuditEventRepository`; use
+  tracing (Zipkin here) and access logs instead of `httpexchanges`, which also records headers that may be sensitive.
