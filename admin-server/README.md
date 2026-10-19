@@ -19,6 +19,7 @@
     - 11.4 [Does Eureka save SBA from calling every instance, by replacing those calls with one call to Eureka?](#qa-eureka-saves-calls)
     - 11.5 [Can we avoid `spring-boot-admin-starter-client` in every service and rely on Eureka alone?](#qa-eureka-only)
     - 11.6 [What are the `AuditEventRepository` and `HttpExchangeRepository` beans in `ActuatorConfig` for?](#qa-actuator-repositories)
+    - 11.7 [Can we use Basic auth to log in to the SBA UI but OAuth2 towards the backend services?](#qa-basic-ui-oauth-backend)
 
 Spring Boot Admin (SBA) dashboard for the Eureka demo. Back to the project
 overview: [../README.md](../README.md).
@@ -650,3 +651,80 @@ SBA client vs Eureka only:
 - ***In-memory limits*** — lost on restart, one store per instance, fixed size.
 - ***Production*** — persist audit events (database, log shipping or SIEM) with your own `AuditEventRepository`; use
   tracing (Zipkin here) and access logs instead of `httpexchanges`, which also records headers that may be sensitive.
+
+<a id="qa-basic-ui-oauth-backend"></a>
+
+**Q7. Can we use Basic auth to log in to the SBA UI but OAuth2 towards the backend services?**
+
+- ***Yes — they are two independent security paths.*** Keep the UI login as it is and swap only the outbound
+  credentials from Basic to a bearer token.
+
+| Path                                 | Secured by                                                       | Today                                                         |
+|--------------------------------------|------------------------------------------------------------------|---------------------------------------------------------------|
+| Browser → SBA UI (`:8084`)           | admin-server's own `SecurityWebFilterChain` (`SecurityConfig`)   | form/Basic login with `spring.security.user` ([§3](#security)) |
+| SBA → each service's `/actuator/**`  | SBA's outbound WebClient (`instance-auth`, `BasicAuthHttpHeaderProvider`) | Basic, from Eureka metadata `user.name` / `user.password`     |
+
+admin-server side:
+
+1. Add `spring-boot-starter-oauth2-client` and register a `client_credentials` client:
+
+   ```yaml
+   spring:
+     security:
+       oauth2:
+         client:
+           registration:
+             sba:
+               provider: idp
+               client-id: admin-server
+               client-secret: ${SBA_CLIENT_SECRET}
+               authorization-grant-type: client_credentials
+               scope: actuator
+           provider:
+             idp:
+               token-uri: http://localhost:9000/oauth2/token
+   ```
+
+2. Attach the token with a reactive `InstanceExchangeFilterFunction` (SBA 4's server is WebFlux, so not the blocking
+   `HttpHeadersProvider`). The manager caches the token and fetches a new one when it expires:
+
+   ```java
+   @Bean
+   ReactiveOAuth2AuthorizedClientManager authorizedClientManager(ReactiveClientRegistrationRepository registrations,
+                                                                 ReactiveOAuth2AuthorizedClientService clients) {
+       var manager = new AuthorizedClientServiceReactiveOAuth2AuthorizedClientManager(registrations, clients);
+       manager.setAuthorizedClientProvider(
+               ReactiveOAuth2AuthorizedClientProviderBuilder.builder().clientCredentials().build());
+       return manager;
+   }
+
+   @Bean
+   InstanceExchangeFilterFunction bearerToken(ReactiveOAuth2AuthorizedClientManager manager) {
+       return (instance, request, next) -> manager
+               .authorize(OAuth2AuthorizeRequest.withClientRegistrationId("sba").principal("admin-server").build())
+               .map(client -> ClientRequest.from(request)
+                       .headers(h -> h.setBearerAuth(client.getAccessToken().getTokenValue()))
+                       .build())
+               .flatMap(next::exchange);
+   }
+   ```
+
+3. Set `spring.boot.admin.instance-auth.enabled: false` and drop `user.name` / `user.password` from the Eureka
+   metadata, otherwise SBA also sends a Basic `Authorization` header that competes with the bearer token.
+
+Each backend service (user, order, product, gateway):
+
+- Add `spring-boot-starter-oauth2-resource-server` with `spring.security.oauth2.resourceserver.jwt.issuer-uri`.
+- Require `SCOPE_actuator` on the actuator filter chain.
+- To migrate gradually, keep `httpBasic()` next to `oauth2ResourceServer(jwt)` on that chain until every caller has
+  switched.
+
+Things to know:
+
+- ***An authorization server is needed*** — this repo has none; add a Spring Authorization Server module (e.g. on
+  `:9000`) or run Keycloak via Docker Compose.
+- ***Backends see the service, not the person*** — every call, including UI actions SBA proxies (Shutdown, Environment
+  update), reaches the backend as the `admin-server` client. To carry the logged-in user's identity, the UI itself must
+  use OAuth2 login with token relay, which means giving up Basic for the UI.
+- ***Eureka is a third path*** — registration and heartbeats to `:8761` / `:8762` still use Basic via `defaultZone`;
+  moving those to OAuth2 is a separate change.

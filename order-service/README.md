@@ -12,6 +12,7 @@
 8. 🧪 [Tests](#tests)
 9. 🛠️ [Gotchas and troubleshooting](#gotchas)
 10. ❓ [Q&A](#qa)
+    - 10.1 [What are the different ways Spring Boot Admin can call `order-service`, and what does `order-service` need for each?](#qa-sba-call-options)
 
 The `order-service` module of the Eureka discovery demo. It is the "kitchen sink"
 service: on top of the plain Eureka-client role shared with `user-service` and
@@ -537,4 +538,125 @@ Docker still required):
 
 ## <span style="color:hsl(350,80%,62%)">10. ❓ Q&A</span>
 
-Questions go here.
+<a id="qa-sba-call-options"></a>
+
+**Q1. What are the different ways Spring Boot Admin can call `order-service`, and what does `order-service` need for each?**
+
+- ***SBA always pulls.*** admin-server polls `/actuator/health` (every 10 s), reads `/actuator/info`, and proxies every
+  UI view through itself (`/instances/{id}/actuator/**`), so the browser never calls `order-service` directly.
+- ***Two choices vary:*** how SBA *learns* the actuator URL (A) and how it *authenticates* the call (B).
+
+***A. How SBA finds `order-service`***
+
+| # | Way                                       | Who knows the URL                     | Used here |
+|---|-------------------------------------------|---------------------------------------|-----------|
+| 1 | Eureka discovery                          | Eureka registry, read by admin-server | **yes**   |
+| 2 | SBA client (push)                         | `order-service` registers itself with SBA   | no        |
+| 3 | Static list (`SimpleDiscoveryClient`)     | admin-server's `application.yml`      | no        |
+| 4 | Kubernetes discovery                      | Kubernetes API (Services/Endpoints)   | no        |
+
+**A1. Eureka discovery (current setup).** No SBA dependency in `order-service`; SBA turns each Eureka instance into an SBA
+instance.
+
+```yaml
+# order-service/src/main/resources/application.yml
+eureka:
+  client:
+    service-url:
+      defaultZone: http://admin:admin@localhost:8761/eureka/,http://admin:admin@127.0.0.1:8762/eureka/
+  instance:
+    prefer-ip-address: true            # SBA calls the address registered here, it must be reachable
+    metadata-map:
+      user.name: ${spring.security.user.name}         # Basic credentials SBA sends (see B1)
+      user.password: ${spring.security.user.password}
+      tags.tier: backend                              # badge in SBA
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, env, metrics, loggers  # ... whatever SBA views you want
+```
+
+Extra metadata SBA reads when actuator isn't on the defaults:
+
+| Metadata key              | Set it when                                                                                           |
+|---------------------------|-------------------------------------------------------------------------------------------------------|
+| `management.port`         | actuator runs on its own `management.server.port` (Spring Cloud Netflix adds this one automatically)  |
+| `management.context-path` | actuator isn't under `/actuator` (`management.endpoints.web.base-path`)                               |
+| `management.address`      | actuator listens on a different host/IP than the app                                                  |
+| `management.scheme`       | actuator uses another scheme than the app (e.g. `https`)                                              |
+| `health.path`             | health isn't at `<context-path>/health`                                                               |
+
+**A2. SBA client (push).** `order-service` POSTs its own URLs to admin-server at startup and DELETEs on shutdown. Useful
+without a registry.
+
+```xml
+<dependency>
+    <groupId>de.codecentric</groupId>
+    <artifactId>spring-boot-admin-starter-client</artifactId>
+</dependency>
+```
+
+```yaml
+spring:
+  boot:
+    admin:
+      client:
+        url: http://localhost:8084                # where admin-server is
+        username: ${ACTUATOR_USER:admin}          # credentials FOR admin-server (POST /instances)
+        password: ${ACTUATOR_PASSWORD:admin}
+        instance:
+          prefer-ip: true                         # register the IP instead of the hostname
+          # service-base-url: http://order-service.example:8082   # override when the auto-detected URL is unreachable (NAT, containers)
+          metadata:
+            user.name: ${spring.security.user.name}       # credentials SBA sends BACK to order-service's actuator
+            user.password: ${spring.security.user.password}
+```
+
+- admin-server must permit `POST /instances` with Basic and exclude it from CSRF.
+- Don't combine with A1: the same app shows up twice (one entry per source).
+
+**A3. Static list on admin-server.** `order-service` needs nothing SBA-specific, only exposed and secured actuator; its URL
+and credentials live in admin-server's config:
+
+```yaml
+# admin-server/src/main/resources/application.yml
+spring:
+  cloud:
+    discovery:
+      client:
+        simple:
+          instances:
+            order-service:
+              - uri: http://localhost:8082
+                metadata:
+                  user.name: admin
+                  user.password: admin
+```
+
+- No health-based registration: a stopped instance stays listed as `OFFLINE` until you edit the list.
+
+**A4. Kubernetes.** admin-server uses `spring-cloud-starter-kubernetes-client` instead of Eureka. `order-service` needs a
+Kubernetes `Service`; name a separate actuator port `management` in the Service's ports, and put `user.name` /
+`tags.*` style keys in the Service's labels/annotations (Spring Cloud Kubernetes copies them into the instance metadata).
+
+***B. How SBA authenticates to `order-service`'s actuator***
+
+| #  | Method                     | `order-service` side                                                                      | admin-server side                                                                                                                                   |
+|----|----------------------------|-------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| B1 | Basic, per-instance        | `httpBasic()` on actuator + metadata `user.name` / `user.password` (**used here**)  | `spring.boot.admin.instance-auth.enabled: true` (default)                                                                                           |
+| B2 | Basic, per-service         | `httpBasic()` only, no credentials in metadata                                      | `spring.boot.admin.instance-auth.service-map.<registered-name>.user-name` / `.user-password`                                                        |
+| B3 | Basic, one shared login    | `httpBasic()` only                                                                  | `spring.boot.admin.instance-auth.default-user-name` / `.default-password`                                                                           |
+| B4 | OAuth2 bearer token        | `spring-boot-starter-oauth2-resource-server`, actuator requires e.g. `SCOPE_actuator` | `client_credentials` client + `InstanceExchangeFilterFunction`, see [admin-server Q7](../admin-server/README.md#qa-basic-ui-oauth-backend)           |
+| B5 | Custom header / API key    | a filter that checks e.g. `X-Api-Key` on `/actuator/**`                             | a `ReactiveHttpHeadersProvider` (or `HttpHeadersProvider`) bean returning that header                                                               |
+| B6 | mutual TLS                 | `server.ssl.client-auth: need` and register https (`eureka.instance.secure-port-enabled: true`) | admin-server's instance `WebClient` configured with a client certificate                                                         |
+| B7 | network only (no auth)     | `permitAll()` on `/actuator/**`, ideally on an internal-only `management.server.port` | nothing                                                                                                                                      |
+
+- ***B1–B3 are tried in that order*** — SBA's `BasicAuthHttpHeaderProvider` uses metadata first, then `service-map`,
+  then the default credentials. Metadata also accepts `user-name` / `user-password` or `username` / `userpassword`.
+- ***Credentials in metadata are visible*** to anyone who can read the Eureka registry (`/eureka/apps`); B2/B3 keep
+  them only on admin-server, B4 removes shared passwords entirely.
+- ***POSTs need CSRF off for actuator*** — SBA's Environment update, Refresh, Restart and Shutdown send no CSRF token,
+  hence `csrf.ignoringRequestMatchers("/actuator/**")` in this module's `SecurityConfig`.
+- ***Public paths*** — `/actuator/health/**` and `/actuator/info` are `permitAll()` here, so status still shows even
+  with wrong credentials; the other views then fail with `401`.
