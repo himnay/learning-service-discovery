@@ -12,6 +12,13 @@ spring:
   docker:
     compose:
       file: user-service/docker-compose.yaml
+  # Fallback for `java -jar`: spring-boot-docker-compose is an optional dependency, so the packaged jar doesn't
+  # contain it and nothing wires the URL. These match user-service/docker-compose.yaml; when compose support is active
+  # (IDE, spring-boot:run) its connection details take precedence. Override with DB_URL / DB_USER / DB_PASSWORD.
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/users}
+    username: ${DB_USER:users}
+    password: ${DB_PASSWORD:users}
   security:
     user:
       name: ${ACTUATOR_USER:admin}
